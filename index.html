@@ -202,6 +202,9 @@
                 <select id="modelSelect" onchange="onModelChange()" class="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-xs text-gray-200 focus:outline-none focus:border-blue-500">
                   <option value="4.0-flash" selected>⚡ Kling 4.0 Flash (Nhanh nhất - 150đ / 250đ)</option>
                   <option value="4.0">🎬 Kling 4.0 Pro (Điện ảnh sắc nét - 200đ)</option>
+                  <option value="2.6">💎 Kling 2.6 (Chi tiết cao - 150đ / 250đ)</option>
+                  <option value="2.1">🏃 Kling 2.1 (Tốc độ cao - 150đ / 250đ)</option>
+                  <option value="3.0">⚖️ Kling 3.0 (Cân bằng - 250đ)</option>
                 </select>
                 <p id="modelDescText" class="text-[11px] text-blue-400 mt-1">Render nhanh nhất, có âm thanh tự sinh kèm theo.</p>
               </div>
@@ -433,12 +436,23 @@
         btn10.disabled = true;
         btn10.classList.add('opacity-40', 'cursor-not-allowed');
         descEl.textContent = '🎬 Mô hình Pro sắc nét nhất, hiệu ứng điện ảnh cao cấp (5s).';
+      } else if (model === '3.0') {
+        setDuration(10);
+        btn5.disabled = true;
+        btn5.classList.add('opacity-40', 'cursor-not-allowed');
+        descEl.textContent = '⚖️ Mô hình 3.0 cân bằng chất lượng & độ dài (10s).';
       } else {
         btn5.disabled = false;
         btn10.disabled = false;
         btn5.classList.remove('opacity-40', 'cursor-not-allowed');
         btn10.classList.remove('opacity-40', 'cursor-not-allowed');
-        descEl.textContent = '⚡ Render nhanh nhất, có âm thanh tự sinh kèm theo.';
+        if (model === '4.0-flash') {
+          descEl.textContent = '⚡ Render nhanh nhất, có âm thanh tự sinh kèm theo.';
+        } else if (model === '2.6') {
+          descEl.textContent = '💎 Rẻ & chi tiết cao, thích hợp video phong cảnh, đồ vật.';
+        } else if (model === '2.1') {
+          descEl.textContent = '🏃 Tốc độ render nhanh, hỗ trợ âm thanh.';
+        }
       }
       calculatePrice();
     }
