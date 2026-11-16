@@ -1,6 +1,6 @@
 """
 Kling AI Video Generator Backend - Xenoecom Studio
-Hệ thống kết nối Klinggiare API + Quản lý Tài khoản & Số dư Khách hàng (SQLite) + Quản trị Admin
+Hệ thống kết nối Klinggiare API + Supabase Cloud Database (Vĩnh Viễn) + Quản trị Admin
 Không yêu cầu cài thêm thư viện (chạy 100% bằng Python tiêu chuẩn)
 """
 
@@ -11,65 +11,21 @@ import urllib.request
 import urllib.error
 import uuid
 import os
-import sqlite3
 import hashlib
 import time
+import db
 
 PORT = int(os.environ.get("PORT", 8080))
 API_BASE = "https://klinggiare.com"
 API_KEY = os.environ.get("KLING_API_KEY", "kling_sk_6bV7-Nvtk9GruKUDL-uMl0OfUXQEldZt_3lQF0MyLhE")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "xenoecom@admin2026")
-ADMIN_TOKENS = set()
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "users.db")
-
-# Khởi tạo Cơ sở dữ liệu SQLite
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    # Bảng người dùng
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        balance INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """)
-    # Bảng phiên đăng nhập (Sessions)
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS sessions (
-        token TEXT PRIMARY KEY,
-        user_id INTEGER NOT NULL,
-        created_at INTEGER NOT NULL,
-        FOREIGN KEY(user_id) REFERENCES users(id)
-    )
-    """)
-    # Bảng lịch sử video của khách
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS user_videos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        job_id INTEGER,
-        prompt TEXT,
-        video_url TEXT,
-        cost INTEGER,
-        status TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """)
-    conn.commit()
-    conn.close()
-
-init_db()
+# Token tĩnh cho Admin - đảm bảo không bị logout khi khởi động lại server
+ADMIN_STATIC_TOKEN = "xenoecom_adm_" + hashlib.sha256(("xenoecom_admin_salt_" + ADMIN_PASSWORD).encode("utf-8")).hexdigest()[:24]
+ADMIN_TOKENS = set([ADMIN_STATIC_TOKEN])
 
 def hash_password(password):
     return hashlib.sha256(("xenoecom_salt_" + password).encode("utf-8")).hexdigest()
-
-def get_db():
-    return sqlite3.connect(DB_PATH)
 
 def get_customer_price(model, duration_seconds, is_motion):
     if is_motion:
@@ -107,18 +63,11 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
         if not auth_header.startswith("Bearer "):
             return None
         token = auth_header.split(" ")[1].strip()
-        conn = get_db()
-        c = conn.cursor()
-        c.execute("SELECT users.id, users.username, users.email, users.balance FROM sessions JOIN users ON sessions.user_id = users.id WHERE sessions.token = ?", (token,))
-        row = c.fetchone()
-        conn.close()
-        if row:
-            return {"id": row[0], "username": row[1], "email": row[2], "balance": row[3], "token": token}
-        return None
+        return db.get_user_by_session_token(token)
 
     def is_admin_authenticated(self):
         token = self.headers.get("X-Admin-Token", "").strip()
-        return bool(token and token in ADMIN_TOKENS)
+        return bool(token and (token == ADMIN_STATIC_TOKEN or token in ADMIN_TOKENS))
 
     def do_GET(self):
         path = self.path.split("?")[0]
@@ -144,13 +93,7 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_json(401, {"success": False, "error": "Yêu cầu quyền Quản trị viên!"})
                 return
             try:
-                conn = get_db()
-                c = conn.cursor()
-                c.execute("SELECT COUNT(*), COALESCE(SUM(balance), 0) FROM users")
-                total_users, total_user_balance = c.fetchone()
-                c.execute("SELECT COUNT(*) FROM user_videos WHERE status = 'success'")
-                total_videos = c.fetchone()[0]
-                conn.close()
+                total_users, total_user_balance, total_videos = db.get_admin_stats()
 
                 # Lấy số dư ví Klinggiare gốc
                 kling_balance = 0
@@ -159,7 +102,7 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                         f"{API_BASE}/api/v1/ext/wallet",
                         headers={"Authorization": f"Bearer {API_KEY}", "User-Agent": "Mozilla/5.0"}
                     )
-                    with urllib.request.urlopen(req, timeout=8) as res:
+                    with urllib.request.urlopen(req, timeout=5) as res:
                         w_data = json.loads(res.read().decode("utf-8"))
                         kling_balance = w_data.get("balance", 0)
                 except Exception as e:
@@ -182,28 +125,7 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_json(401, {"success": False, "error": "Yêu cầu quyền Quản trị viên!"})
                 return
             try:
-                conn = get_db()
-                c = conn.cursor()
-                c.execute("""
-                    SELECT u.id, u.username, u.email, u.balance, u.created_at, COUNT(v.id) as video_count
-                    FROM users u
-                    LEFT JOIN user_videos v ON u.id = v.user_id AND v.status = 'success'
-                    GROUP BY u.id
-                    ORDER BY u.id DESC
-                """)
-                rows = c.fetchall()
-                conn.close()
-                user_list = [
-                    {
-                        "id": r[0],
-                        "username": r[1],
-                        "email": r[2],
-                        "balance": r[3],
-                        "created_at": r[4],
-                        "videoCount": r[5]
-                    }
-                    for r in rows
-                ]
+                user_list = db.get_admin_users()
                 self.send_json(200, {"success": True, "users": user_list})
             except Exception as e:
                 self.send_json(500, {"success": False, "error": str(e)})
@@ -215,27 +137,7 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_json(401, {"success": False, "error": "Yêu cầu quyền Quản trị viên!"})
                 return
             try:
-                conn = get_db()
-                c = conn.cursor()
-                c.execute("""
-                    SELECT u.username, v.prompt, v.video_url, v.cost, v.created_at
-                    FROM user_videos v
-                    JOIN users u ON v.user_id = u.id
-                    WHERE v.video_url IS NOT NULL AND v.video_url != ''
-                    ORDER BY v.id DESC LIMIT 40
-                """)
-                rows = c.fetchall()
-                conn.close()
-                vid_list = [
-                    {
-                        "username": r[0],
-                        "prompt": r[1],
-                        "videoUrl": r[2],
-                        "cost": r[3],
-                        "time": r[4]
-                    }
-                    for r in rows
-                ]
+                vid_list = db.get_admin_videos(40)
                 self.send_json(200, {"success": True, "videos": vid_list})
             except Exception as e:
                 self.send_json(500, {"success": False, "error": str(e)})
@@ -256,12 +158,7 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
             if not user:
                 self.send_json(401, {"success": False, "error": "Chưa đăng nhập"})
                 return
-            conn = get_db()
-            c = conn.cursor()
-            c.execute("SELECT job_id, prompt, video_url, cost, status, created_at FROM user_videos WHERE user_id = ? ORDER BY id DESC LIMIT 20", (user["id"],))
-            rows = c.fetchall()
-            conn.close()
-            videos = [{"jobId": r[0], "prompt": r[1], "videoUrl": r[2], "cost": r[3], "status": r[4], "time": r[5]} for r in rows]
+            videos = db.get_user_videos(user["id"])
             self.send_json(200, {"success": True, "videos": videos})
             return
 
@@ -272,7 +169,7 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                     f"{API_BASE}/api/v1/system/status",
                     headers={"User-Agent": "Mozilla/5.0"}
                 )
-                with urllib.request.urlopen(req, timeout=10) as res:
+                with urllib.request.urlopen(req, timeout=8) as res:
                     data = json.loads(res.read().decode("utf-8"))
                     self.send_json(200, {"success": True, "status": data})
             except urllib.error.HTTPError as e:
@@ -327,11 +224,7 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
 
                         # Cập nhật link video vào database nếu có
                         if video_url:
-                            conn = get_db()
-                            c = conn.cursor()
-                            c.execute("UPDATE user_videos SET video_url = ?, status = 'success' WHERE job_id = ?", (video_url, job_id))
-                            conn.commit()
-                            conn.close()
+                            db.update_video_url(job_id, video_url)
 
                     self.send_json(200, {
                         "success": True, 
@@ -357,7 +250,7 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                 data = json.loads(body.decode("utf-8"))
                 pwd = data.get("password", "")
                 if pwd == ADMIN_PASSWORD:
-                    token = "xenoecom_adm_" + str(uuid.uuid4())
+                    token = ADMIN_STATIC_TOKEN
                     ADMIN_TOKENS.add(token)
                     self.send_json(200, {"success": True, "adminToken": token})
                 else:
@@ -383,19 +276,13 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                     return
 
                 diff = amount if action == "add" else -amount
-                conn = get_db()
-                c = conn.cursor()
-                c.execute("UPDATE users SET balance = MAX(0, balance + ?) WHERE id = ?", (diff, user_id))
-                c.execute("SELECT balance FROM users WHERE id = ?", (user_id,))
-                row = c.fetchone()
-                conn.commit()
-                conn.close()
+                new_bal = db.adjust_user_balance(user_id, diff)
 
-                if not row:
+                if new_bal is None:
                     self.send_json(404, {"success": False, "error": "Không tìm thấy khách hàng!"})
                     return
 
-                self.send_json(200, {"success": True, "newBalance": row[0]})
+                self.send_json(200, {"success": True, "newBalance": new_bal})
             except Exception as e:
                 self.send_json(500, {"success": False, "error": str(e)})
             return
@@ -417,33 +304,24 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_json(400, {"success": False, "error": "Mật khẩu tối thiểu phải từ 6 ký tự!"})
                     return
 
-                conn = get_db()
-                c = conn.cursor()
                 # Kiểm tra trùng lặp
-                c.execute("SELECT id FROM users WHERE username = ? OR email = ?", (username, email))
-                if c.fetchone():
-                    conn.close()
+                if db.find_user_by_login(username) or db.find_user_by_login(email):
                     self.send_json(400, {"success": False, "error": "Tên đăng nhập hoặc Email này đã được sử dụng!"})
                     return
 
                 # Khách mới đăng ký: số dư = 0đ (bắt buộc nạp tiền mới được tạo video, chống spam SLL)
                 initial_balance = 0 
                 pwd_hash = hash_password(password)
-                c.execute("INSERT INTO users (username, email, password_hash, balance) VALUES (?, ?, ?, ?)",
-                          (username, email, pwd_hash, initial_balance))
-                user_id = c.lastrowid
+                user = db.create_user(username, email, pwd_hash, initial_balance)
 
                 # Tạo session token
                 token = str(uuid.uuid4())
-                c.execute("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)",
-                          (token, user_id, int(time.time())))
-                conn.commit()
-                conn.close()
+                db.create_session(token, user["id"])
 
                 self.send_json(200, {
                     "success": True,
                     "token": token,
-                    "user": {"id": user_id, "username": username, "email": email, "balance": initial_balance}
+                    "user": {"id": user["id"], "username": username, "email": email, "balance": initial_balance}
                 })
             except Exception as e:
                 self.send_json(500, {"success": False, "error": str(e)})
@@ -461,28 +339,19 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_json(400, {"success": False, "error": "Vui lòng nhập tên đăng nhập và mật khẩu!"})
                     return
 
-                conn = get_db()
-                c = conn.cursor()
                 pwd_hash = hash_password(password)
-                c.execute("SELECT id, username, email, balance FROM users WHERE (username = ? OR email = ?) AND password_hash = ?",
-                          (username, username, pwd_hash))
-                row = c.fetchone()
-                if not row:
-                    conn.close()
+                user = db.find_user_by_login(username)
+                if not user or user.get("password_hash") != pwd_hash:
                     self.send_json(400, {"success": False, "error": "Tên đăng nhập hoặc mật khẩu không chính xác!"})
                     return
 
-                user_id = row[0]
                 token = str(uuid.uuid4())
-                c.execute("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)",
-                          (token, user_id, int(time.time())))
-                conn.commit()
-                conn.close()
+                db.create_session(token, user["id"])
 
                 self.send_json(200, {
                     "success": True,
                     "token": token,
-                    "user": {"id": user_id, "username": row[1], "email": row[2], "balance": row[3]}
+                    "user": {"id": user["id"], "username": user["username"], "email": user["email"], "balance": user["balance"]}
                 })
             except Exception as e:
                 self.send_json(500, {"success": False, "error": str(e)})
@@ -493,11 +362,7 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
             auth_header = self.headers.get("Authorization", "")
             if auth_header.startswith("Bearer "):
                 token = auth_header.split(" ")[1].strip()
-                conn = get_db()
-                c = conn.cursor()
-                c.execute("DELETE FROM sessions WHERE token = ?", (token,))
-                conn.commit()
-                conn.close()
+                db.delete_session(token)
             self.send_json(200, {"success": True})
             return
 
@@ -528,11 +393,7 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                     return
 
                 # Trừ tiền tài khoản của khách trước
-                conn = get_db()
-                c = conn.cursor()
-                new_balance = user["balance"] - cost
-                c.execute("UPDATE users SET balance = ? WHERE id = ?", (new_balance, user["id"]))
-                conn.commit()
+                new_balance = db.adjust_user_balance(user["id"], -cost)
 
                 # Chuẩn bị payload gửi sang Klinggiare
                 batch_payload = {
@@ -577,11 +438,8 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                         jobs = batch_data.get("jobs", [])
                         job_id = jobs[0].get("id") if jobs else None
                         
-                        # Lưu lịch sử tạo video vào DB
-                        c.execute("INSERT INTO user_videos (user_id, job_id, prompt, cost, status) VALUES (?, ?, ?, ?, 'processing')",
-                                  (user["id"], job_id, batch_payload["prompt"], cost))
-                        conn.commit()
-                        conn.close()
+                        # Lưu lịch sử tạo video vào DB đám mây
+                        db.add_user_video(user["id"], job_id, batch_payload["prompt"], cost, "processing")
 
                         self.send_json(200, {
                             "success": True, 
@@ -591,9 +449,7 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                         })
                 except Exception as api_err:
                     # NẾU API LỖI -> HOÀN LẠI TIỀN CHO KHÁCH NGAY LẬP TỨC!
-                    c.execute("UPDATE users SET balance = balance + ? WHERE id = ?", (cost, user["id"]))
-                    conn.commit()
-                    conn.close()
+                    db.adjust_user_balance(user["id"], cost)
                     raise api_err
 
             except urllib.error.HTTPError as e:
