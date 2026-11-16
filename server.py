@@ -46,9 +46,9 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
         if path == "/api/wallet":
             try:
                 req = urllib.request.Request(
-                    f"${API_BASE}/api/v1/ext/wallet",
+                    f"{API_BASE}/api/v1/ext/wallet",
                     headers={
-                        "Authorization": f"Bearer ${API_KEY}",
+                        "Authorization": f"Bearer {API_KEY}",
                         "User-Agent": "Mozilla/5.0"
                     }
                 )
@@ -66,7 +66,7 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
         if path == "/api/prices":
             try:
                 req = urllib.request.Request(
-                    f"${API_BASE}/api/v1/prices",
+                    f"{API_BASE}/api/v1/prices",
                     headers={"User-Agent": "Mozilla/5.0"}
                 )
                 with urllib.request.urlopen(req, timeout=10) as res:
@@ -80,7 +80,7 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
         if path == "/api/system/status":
             try:
                 req = urllib.request.Request(
-                    f"${API_BASE}/api/v1/system/status",
+                    f"{API_BASE}/api/v1/system/status",
                     headers={"User-Agent": "Mozilla/5.0"}
                 )
                 with urllib.request.urlopen(req, timeout=10) as res:
@@ -95,9 +95,9 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
             job_id = path.replace("/api/job/", "").strip()
             try:
                 req = urllib.request.Request(
-                    f"${API_BASE}/api/v1/ext/jobs/${job_id}",
+                    f"{API_BASE}/api/v1/ext/jobs/{job_id}",
                     headers={
-                        "Authorization": f"Bearer ${API_KEY}",
+                        "Authorization": f"Bearer {API_KEY}",
                         "User-Agent": "Mozilla/5.0"
                     }
                 )
@@ -109,9 +109,9 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                     if job_data.get("status") == "success":
                         try:
                             v_req = urllib.request.Request(
-                                f"${API_BASE}/api/v1/ext/jobs/${job_id}/video-url",
+                                f"{API_BASE}/api/v1/ext/jobs/{job_id}/video-url",
                                 headers={
-                                    "Authorization": f"Bearer ${API_KEY}",
+                                    "Authorization": f"Bearer {API_KEY}",
                                     "User-Agent": "Mozilla/5.0"
                                 }
                             )
@@ -145,10 +145,10 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
             try:
                 req_data = json.loads(body.decode("utf-8"))
                 req = urllib.request.Request(
-                    f"${API_BASE}/api/v1/ext/batches/quote",
+                    f"{API_BASE}/api/v1/ext/batches/quote",
                     data=json.dumps(req_data).encode("utf-8"),
                     headers={
-                        "Authorization": f"Bearer ${API_KEY}",
+                        "Authorization": f"Bearer {API_KEY}",
                         "Content-Type": "application/json",
                         "User-Agent": "Mozilla/5.0"
                     }
@@ -199,10 +199,10 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                 idempotency_key = str(uuid.uuid4())
 
                 req = urllib.request.Request(
-                    f"${API_BASE}/api/v1/ext/batches",
+                    f"{API_BASE}/api/v1/ext/batches",
                     data=json.dumps(batch_payload).encode("utf-8"),
                     headers={
-                        "Authorization": f"Bearer ${API_KEY}",
+                        "Authorization": f"Bearer {API_KEY}",
                         "Content-Type": "application/json",
                         "Idempotency-Key": idempotency_key,
                         "User-Agent": "Mozilla/5.0"
@@ -230,10 +230,10 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
             body = self.rfile.read(content_length)
             try:
                 req = urllib.request.Request(
-                    f"${API_BASE}/api/v1/ext/uploads",
+                    f"{API_BASE}/api/v1/ext/uploads",
                     data=body,
                     headers={
-                        "Authorization": f"Bearer ${API_KEY}",
+                        "Authorization": f"Bearer {API_KEY}",
                         "Content-Type": content_type,
                         "User-Agent": "Mozilla/5.0"
                     }
@@ -255,8 +255,8 @@ def run():
     with socketserver.TCPServer(("", PORT), KlingHandler) as httpd:
         print(f"=====================================================")
         print(f"🚀 XENOECOM KLING AI WEB SERVER DANG CHAY TAI:")
-        print(f"👉 http://localhost:${PORT}")
-        print(f"👉 http://127.0.0.1:${PORT}")
+        print(f"👉 http://localhost:{PORT}")
+        print(f"👉 http://127.0.0.1:{PORT}")
         print(f"=====================================================")
         print(f"Nhan Ctrl+C de dung server.")
         try:
