@@ -234,8 +234,8 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_json(400, {"success": False, "error": "Tên đăng nhập hoặc Email này đã được sử dụng!"})
                     return
 
-                # Tặng thử 300đ cho khách tạo thử video đầu tiên!
-                initial_balance = 300 
+                # Khách mới đăng ký: số dư = 0đ (bắt buộc nạp tiền mới được tạo video, chống spam SLL)
+                initial_balance = 0 
                 pwd_hash = hash_password(password)
                 c.execute("INSERT INTO users (username, email, password_hash, balance) VALUES (?, ?, ?, ?)",
                           (username, email, pwd_hash, initial_balance))
