@@ -25,14 +25,21 @@
     body { background-color: #0b0f19; color: #f3f4f6; }
     .gradient-glow { background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.12), transparent 70%); }
     .glass-card { background: rgba(17, 24, 39, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .modal-backdrop { background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); }
   </style>
 </head>
 <body class="min-h-screen font-sans selection:bg-blue-600 selection:text-white">
   
+  <!-- Cảnh báo bảo trì tự động -->
+  <div id="maintenanceBanner" class="hidden bg-amber-500/20 border-b border-amber-500/30 px-4 py-2 text-center text-xs text-amber-300 font-medium flex items-center justify-center gap-2 relative z-50">
+    <i data-lucide="wrench" class="w-4 h-4 text-amber-400 animate-pulse"></i>
+    <span id="maintenanceMessageText">Hệ thống máy chủ AI đang bảo trì định kỳ. Quý khách vui lòng quay lại sau ít phút.</span>
+  </div>
+
   <div class="fixed inset-0 gradient-glow pointer-events-none"></div>
 
-  <!-- Header -->
-  <header class="sticky top-0 z-50 glass-card border-b border-gray-800/80 px-4 sm:px-8 py-3 flex items-center justify-between">
+  <!-- Header có Đăng Nhập / Đăng Ký / Số Dư Khách Hàng -->
+  <header class="sticky top-0 z-40 glass-card border-b border-gray-800/80 px-4 sm:px-8 py-3 flex items-center justify-between">
     <div class="flex items-center gap-3">
       <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/25">
         <i data-lucide="sparkles" class="w-4 h-4 text-white"></i>
@@ -40,21 +47,44 @@
       <div>
         <h1 class="text-base font-bold tracking-tight flex items-center gap-2">
           xenoecom<span class="text-blue-500">.cloud</span>
-          <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Kling AI Studio</span>
+          <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Studio</span>
         </h1>
       </div>
     </div>
 
-    <!-- Số dư ví -->
-    <div class="flex items-center gap-2">
-      <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-800/90 border border-gray-700/80 text-xs">
-        <i data-lucide="wallet" class="w-3.5 h-3.5 text-emerald-400"></i>
-        <span class="text-gray-400">Ví:</span>
-        <span id="walletBalance" class="font-bold text-emerald-400">Đang tải...</span>
+    <!-- Khu vực Đăng nhập & Số dư của khách -->
+    <div class="flex items-center gap-2.5">
+      
+      <!-- 1. Khi chưa đăng nhập -->
+      <div id="guestNav" class="flex items-center gap-2">
+        <button onclick="openAuthModal('login')" class="px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs text-gray-300 font-medium transition">
+          Đăng Nhập
+        </button>
+        <button onclick="openAuthModal('register')" class="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-600/20 transition">
+          Đăng Ký
+        </button>
       </div>
-      <button onclick="fetchWallet()" title="Làm mới ví" class="p-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition">
-        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-      </button>
+
+      <!-- 2. Khi đã đăng nhập -->
+      <div id="userNav" class="hidden flex items-center gap-2.5">
+        <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-800/90 border border-gray-700 text-xs">
+          <i data-lucide="wallet" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span class="text-gray-400">Số dư:</span>
+          <span id="userBalanceText" class="font-bold text-emerald-400">0 đ</span>
+        </div>
+
+        <button onclick="openDepositModal()" class="px-2.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1 transition">
+          <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Nạp tiền
+        </button>
+
+        <div class="flex items-center gap-1.5 pl-2 border-l border-gray-800">
+          <span id="usernameDisplay" class="text-xs font-semibold text-gray-300">Khách</span>
+          <button onclick="handleLogout()" title="Đăng xuất" class="p-1 rounded-lg text-gray-400 hover:text-red-400 transition">
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+
     </div>
   </header>
 
@@ -65,7 +95,7 @@
         Xưởng Tạo Video Điện Ảnh Kling AI
       </h2>
       <p class="text-gray-400 max-w-lg mx-auto text-xs sm:text-sm">
-        Tạo video từ văn bản, hình ảnh hoặc điều khiển nhân vật chuyển động theo video mẫu.
+        Đăng ký tài khoản nhận ngay quà tặng trải nghiệm và bắt đầu tạo video AI đỉnh cao.
       </p>
     </div>
 
@@ -89,7 +119,7 @@
             </button>
           </div>
 
-          <!-- ================= CHẾ ĐỘ 1 & 2: ẢNH SANG VIDEO ================= -->
+          <!-- ẢNH SANG VIDEO -->
           <div id="imageUploadArea" class="hidden mb-4">
             <div id="dropZone" class="border-2 border-dashed border-gray-700 hover:border-blue-500 rounded-xl p-4 text-center cursor-pointer transition bg-gray-900/40">
               <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
@@ -113,7 +143,7 @@
               </div>
             </div>
 
-            <!-- Tùy chọn ảnh cuối (End frame) -->
+            <!-- Tùy chọn ảnh cuối -->
             <div class="mt-2.5 flex items-center justify-between p-2.5 rounded-xl bg-gray-900/60 border border-gray-800 text-xs text-gray-300">
               <span class="flex items-center gap-1.5">
                 <i data-lucide="split" class="w-3.5 h-3.5 text-indigo-400"></i> Thêm ảnh kết thúc (End frame)
@@ -128,15 +158,14 @@
             </div>
           </div>
 
-          <!-- ================= CHẾ ĐỘ 3: MOTION CONTROL (TINH GỌN) ================= -->
+          <!-- MOTION CONTROL -->
           <div id="motionArea" class="hidden mb-4 space-y-3">
             <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 flex items-start gap-2">
               <i data-lucide="info" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i>
-              <span>Nhân vật trong ảnh sẽ bắt chước cử chỉ, nhảy múa từ video mẫu (Thời lượng tự động theo video mẫu).</span>
+              <span>Nhân vật trong ảnh sẽ bắt chước cử chỉ từ video mẫu (Thời lượng tự động theo video).</span>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <!-- Ảnh nhân vật -->
               <div class="p-3.5 rounded-xl bg-gray-900 border border-gray-800 text-center">
                 <label class="block text-xs font-semibold text-gray-300 mb-2">1. Ảnh Nhân Vật</label>
                 <input type="file" id="motionCharInput" accept="image/*" class="hidden" onchange="handleMotionCharSelect(event)">
@@ -146,7 +175,6 @@
                 <p id="motionCharStatus" class="text-[11px] text-gray-500 mt-1.5 truncate">Chưa chọn ảnh</p>
               </div>
 
-              <!-- Video mẫu -->
               <div class="p-3.5 rounded-xl bg-gray-900 border border-gray-800 text-center">
                 <label class="block text-xs font-semibold text-gray-300 mb-2">2. Video Chuyển Động Mẫu</label>
                 <input type="file" id="motionVideoInput" accept="video/mp4,video/quicktime,video/webm" class="hidden" onchange="handleMotionVideoSelect(event)">
@@ -157,7 +185,6 @@
               </div>
             </div>
 
-            <!-- Tùy chọn Motion Control duy nhất -->
             <div class="p-3 rounded-xl bg-gray-900 border border-gray-800 flex items-center justify-between text-xs text-gray-300">
               <span class="flex items-center gap-1.5">
                 <i data-lucide="volume-2" class="w-3.5 h-3.5 text-blue-400"></i> Giữ âm thanh gốc của video mẫu
@@ -166,7 +193,7 @@
             </div>
           </div>
 
-          <!-- ================= Ô NHẬP PROMPT (CHỈ HIỆN KHI TEXT HOẶC IMAGE) ================= -->
+          <!-- PROMPT -->
           <div id="promptSection" class="mb-4">
             <div class="flex items-center justify-between mb-1.5">
               <label for="promptInput" class="text-xs font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
@@ -192,19 +219,17 @@
             </div>
           </div>
 
-          <!-- ================= BẢNG CẤU HÌNH (TỰ ĐỘNG ẨN KHI Ở MOTION CONTROL) ================= -->
+          <!-- BẢNG CẤU HÌNH & BẢNG GIÁ ĐÃ NHÂN ĐÔI LỢI NHUẬN -->
           <div id="generalSettingsSection" class="space-y-3 pt-3 border-t border-gray-800">
-            
-            <!-- Mô hình AI & Thời lượng -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs font-semibold text-gray-400 mb-1">Mô hình AI (Model)</label>
                 <select id="modelSelect" onchange="onModelChange()" class="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-xs text-gray-200 focus:outline-none focus:border-blue-500">
-                  <option value="4.0-flash" selected>⚡ Kling 4.0 Flash (Nhanh nhất - 150đ / 250đ)</option>
-                  <option value="4.0">🎬 Kling 4.0 Pro (Điện ảnh sắc nét - 200đ)</option>
-                  <option value="2.6">💎 Kling 2.6 (Chi tiết cao - 150đ / 250đ)</option>
-                  <option value="2.1">🏃 Kling 2.1 (Tốc độ cao - 150đ / 250đ)</option>
-                  <option value="3.0">⚖️ Kling 3.0 (Cân bằng - 250đ)</option>
+                  <option value="4.0-flash" selected>⚡ Kling 4.0 Flash (Nhanh nhất - 300đ / 500đ)</option>
+                  <option value="4.0">🎬 Kling 4.0 Pro (Điện ảnh sắc nét - 400đ)</option>
+                  <option value="2.6">💎 Kling 2.6 (Chi tiết cao - 300đ / 500đ)</option>
+                  <option value="2.1">🏃 Kling 2.1 (Tốc độ cao - 300đ / 500đ)</option>
+                  <option value="3.0">⚖️ Kling 3.0 (Cân bằng - 500đ)</option>
                 </select>
                 <p id="modelDescText" class="text-[11px] text-blue-400 mt-1">Render nhanh nhất, có âm thanh tự sinh kèm theo.</p>
               </div>
@@ -222,7 +247,6 @@
               </div>
             </div>
 
-            <!-- Tỉ lệ khung hình & Âm thanh -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs font-semibold text-gray-400 mb-1">Tỉ lệ khung hình</label>
@@ -255,11 +279,11 @@
 
           </div>
 
-          <!-- Nút Tạo Video & Giá tiền -->
+          <!-- Nút Tạo Video & Giá bán nhân đôi -->
           <div class="mt-5 pt-3.5 border-t border-gray-800 flex items-center justify-between gap-4">
             <div>
               <span class="text-[11px] text-gray-400 block">Chi phí lượt này:</span>
-              <span id="priceEstimate" class="text-base font-bold text-amber-400">150 đ</span>
+              <span id="priceEstimate" class="text-base font-bold text-amber-400">300 đ</span>
             </div>
 
             <button id="btnGenerate" onclick="startGeneration()" class="flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
@@ -272,7 +296,7 @@
 
       </div>
 
-      <!-- CỘT PHẢI: MÀN HÌNH XEM KẾT QUẢ (5 Cột) -->
+      <!-- CỘT PHẢI: MÀN HÌNH XEM KẾT QUẢ -->
       <div class="lg:col-span-5 space-y-4">
         
         <div class="glass-card rounded-2xl p-5 shadow-xl h-full flex flex-col justify-between">
@@ -294,7 +318,7 @@
                   <i data-lucide="film" class="w-6 h-6"></i>
                 </div>
                 <p class="text-xs text-gray-400 font-medium">Chưa có video nào đang chạy</p>
-                <p class="text-[11px] text-gray-500">Chọn cấu hình và bấm "Bắt Đầu Tạo Video"</p>
+                <p class="text-[11px] text-gray-500">Đăng nhập tài khoản và bấm "Bắt Đầu Tạo Video"</p>
               </div>
 
               <div id="stateLoading" class="hidden text-center p-4 space-y-3 w-full">
@@ -333,11 +357,11 @@
 
     </div>
 
-    <!-- LỊCH SỬ VIDEO -->
+    <!-- LỊCH SỬ VIDEO CỦA KHÁCH -->
     <div class="mt-8">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-sm font-bold text-gray-200 flex items-center gap-2">
-          <i data-lucide="history" class="w-4 h-4 text-blue-400"></i> Lịch Sử Video Vừa Tạo
+          <i data-lucide="history" class="w-4 h-4 text-blue-400"></i> Video Đã Tạo Của Bạn
         </h3>
         <button onclick="clearHistory()" class="text-xs text-gray-500 hover:text-red-400 transition">
           Xóa lịch sử
@@ -349,14 +373,122 @@
 
   </main>
 
+  <!-- ================= MODAL ĐĂNG NHẬP / ĐĂNG KÝ ================= -->
+  <div id="authModal" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-gray-700 relative animate-scale-up">
+      <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <!-- Tab Đăng Nhập / Đăng Ký -->
+      <div class="flex p-1 bg-gray-900 rounded-xl mb-5 border border-gray-800">
+        <button id="authTabLogin" onclick="setAuthTab('login')" class="flex-1 py-2 rounded-lg text-xs font-bold transition bg-blue-600 text-white shadow">
+          Đăng Nhập
+        </button>
+        <button id="authTabRegister" onclick="setAuthTab('register')" class="flex-1 py-2 rounded-lg text-xs font-bold transition text-gray-400 hover:text-white">
+          Đăng Ký
+        </button>
+      </div>
+
+      <!-- Form Đăng Nhập -->
+      <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Tên đăng nhập hoặc Email</label>
+          <input type="text" id="loginUsername" required placeholder="Nhập username/email..." class="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white focus:outline-none focus:border-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Mật khẩu</label>
+          <input type="password" id="loginPassword" required placeholder="Nhập mật khẩu..." class="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white focus:outline-none focus:border-blue-500">
+        </div>
+        <p id="loginErrorText" class="text-xs text-red-400 hidden"></p>
+        <button type="submit" id="btnLoginSubmit" class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg transition">
+          Đăng Nhập Ngay
+        </button>
+      </form>
+
+      <!-- Form Đăng Ký -->
+      <form id="registerForm" onsubmit="handleRegisterSubmit(event)" class="hidden space-y-3.5">
+        <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 text-center font-medium">
+          🎁 Đăng ký ngay hôm nay nhận ngay <strong>300 đ</strong> tạo video trải nghiệm!
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Tên đăng nhập</label>
+          <input type="text" id="regUsername" required placeholder="Viết liền không dấu, ví dụ: namnguyen" class="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white focus:outline-none focus:border-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Địa chỉ Email</label>
+          <input type="email" id="regEmail" required placeholder="email@gmail.com" class="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white focus:outline-none focus:border-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Mật khẩu (tối thiểu 6 ký tự)</label>
+          <input type="password" id="regPassword" required minlength="6" placeholder="Mật khẩu bí mật..." class="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white focus:outline-none focus:border-blue-500">
+        </div>
+        <p id="regErrorText" class="text-xs text-red-400 hidden"></p>
+        <button type="submit" id="btnRegisterSubmit" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg transition">
+          Tạo Tài Khoản Mới
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ================= MODAL NẠP TIỀN (VIETQR) ================= -->
+  <div id="depositModal" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-gray-700 relative text-center">
+      <button onclick="closeDepositModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <div class="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 mx-auto flex items-center justify-center mb-3">
+        <i data-lucide="credit-card" class="w-6 h-6"></i>
+      </div>
+
+      <h3 class="text-base font-bold text-white mb-1">Nạp Tiền Vào Tài Khoản</h3>
+      <p class="text-xs text-gray-400 mb-4">Quét mã VietQR trên bất kỳ ứng dụng ngân hàng nào</p>
+
+      <!-- Chọn gói nạp -->
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <button type="button" onclick="selectDepositAmount(20000)" id="dep20k" class="p-2 rounded-xl border border-blue-500 bg-blue-500/10 text-xs text-blue-400 font-bold transition">
+          20.000 đ
+        </button>
+        <button type="button" onclick="selectDepositAmount(50000)" id="dep50k" class="p-2 rounded-xl border border-gray-700 bg-gray-900 text-xs text-gray-300 font-bold hover:text-white transition">
+          50.000 đ
+        </button>
+        <button type="button" onclick="selectDepositAmount(100000)" id="dep100k" class="p-2 rounded-xl border border-gray-700 bg-gray-900 text-xs text-gray-300 font-bold hover:text-white transition">
+          100.000 đ
+        </button>
+      </div>
+
+      <!-- Hướng dẫn chuyển khoản -->
+      <div class="p-3.5 rounded-xl bg-gray-900/90 border border-gray-800 text-left space-y-2 text-xs">
+        <div class="flex justify-between">
+          <span class="text-gray-400">Số tiền nạp:</span>
+          <span id="depositAmountText" class="font-bold text-emerald-400">20.000 đ</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-400">Cú pháp chuyển khoản:</span>
+          <span id="depositSyntax" class="font-mono font-bold text-amber-400">XENOECOM USER</span>
+        </div>
+        <p class="text-[11px] text-gray-500 pt-1 border-t border-gray-800">
+          * Sau khi chuyển khoản, tài khoản sẽ được cộng tiền sau 1 - 3 phút. Nếu cần hỗ trợ nhanh, vui lòng nhắn tin Zalo Admin!
+        </p>
+      </div>
+
+      <button onclick="closeDepositModal()" class="w-full mt-4 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold transition">
+        Đóng
+      </button>
+    </div>
+  </div>
+
   <footer class="mt-12 py-5 border-t border-gray-900 text-center text-xs text-gray-500 relative z-10">
-    <p>© 2026 xenoecom.cloud · Tích hợp sức mạnh Kling AI Video Studio</p>
+    <p>© 2026 xenoecom.cloud · Nền tảng tạo video AI chuyên nghiệp</p>
   </footer>
 
   <script>
     lucide.createIcons();
 
-    let currentMode = 'text'; // 'text' | 'image' | 'motion'
+    let currentUser = null;
+    let currentMode = 'text';
     let currentDuration = 5;
     let currentAspectRatio = '16:9';
     let uploadedImageKey = null;
@@ -364,25 +496,175 @@
     let motionCharKey = null;
     let motionVideoKey = null;
     let activePollingInterval = null;
+    let selectedDepositValue = 20000;
 
-    async function fetchWallet() {
-      const balanceEl = document.getElementById('walletBalance');
-      balanceEl.textContent = 'Đang tải...';
+    // 1. Quản lý Đăng nhập & Xác thực
+    async function checkAuth() {
+      const token = localStorage.getItem('xenoecom_auth_token');
+      if (!token) {
+        setGuestState();
+        return;
+      }
       try {
-        const res = await fetch('/api/wallet');
+        const res = await fetch('/api/auth/me', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
         const data = await res.json();
-        if (data.success && data.wallet) {
-          const balance = Number(data.wallet.balance).toLocaleString('vi-VN');
-          balanceEl.textContent = balance + ' đ';
+        if (data.success && data.user) {
+          currentUser = data.user;
+          setUserState(currentUser);
         } else {
-          balanceEl.textContent = 'Lỗi ví';
+          localStorage.removeItem('xenoecom_auth_token');
+          setGuestState();
         }
-      } catch (err) {
-        balanceEl.textContent = 'Mất kết nối';
+      } catch (e) {
+        setGuestState();
       }
     }
 
-    // Chuyển đổi tab chế độ (Ẩn triệt để các phần thừa)
+    function setUserState(user) {
+      document.getElementById('guestNav').classList.add('hidden');
+      document.getElementById('userNav').classList.remove('hidden');
+      document.getElementById('usernameDisplay').textContent = user.username;
+      document.getElementById('userBalanceText').textContent = Number(user.balance).toLocaleString('vi-VN') + ' đ';
+      document.getElementById('depositSyntax').textContent = 'XENOECOM ' + user.username.toUpperCase();
+    }
+
+    function setGuestState() {
+      currentUser = null;
+      document.getElementById('guestNav').classList.remove('hidden');
+      document.getElementById('userNav').classList.add('hidden');
+    }
+
+    function openAuthModal(tab) {
+      document.getElementById('authModal').classList.remove('hidden');
+      setAuthTab(tab);
+    }
+
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.add('hidden');
+    }
+
+    function setAuthTab(tab) {
+      const btnLogin = document.getElementById('authTabLogin');
+      const btnReg = document.getElementById('authTabRegister');
+      const formLogin = document.getElementById('loginForm');
+      const formReg = document.getElementById('registerForm');
+
+      if (tab === 'login') {
+        btnLogin.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition bg-blue-600 text-white shadow';
+        btnReg.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition text-gray-400 hover:text-white';
+        formLogin.classList.remove('hidden');
+        formReg.classList.add('hidden');
+      } else {
+        btnReg.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition bg-blue-600 text-white shadow';
+        btnLogin.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition text-gray-400 hover:text-white';
+        formReg.classList.remove('hidden');
+        formLogin.classList.add('hidden');
+      }
+    }
+
+    async function handleLoginSubmit(e) {
+      e.preventDefault();
+      const u = document.getElementById('loginUsername').value.trim();
+      const p = document.getElementById('loginPassword').value;
+      const errEl = document.getElementById('loginErrorText');
+      errEl.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: u, password: p })
+        });
+        const data = await res.json();
+        if (data.success && data.token) {
+          localStorage.setItem('xenoecom_auth_token', data.token);
+          currentUser = data.user;
+          setUserState(currentUser);
+          closeAuthModal();
+        } else {
+          errEl.textContent = data.error || 'Đăng nhập thất bại!';
+          errEl.classList.remove('hidden');
+        }
+      } catch (err) {
+        errEl.textContent = 'Lỗi kết nối máy chủ!';
+        errEl.classList.remove('hidden');
+      }
+    }
+
+    async function handleRegisterSubmit(e) {
+      e.preventDefault();
+      const u = document.getElementById('regUsername').value.trim();
+      const em = document.getElementById('regEmail').value.trim();
+      const p = document.getElementById('regPassword').value;
+      const errEl = document.getElementById('regErrorText');
+      errEl.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: u, email: em, password: p })
+        });
+        const data = await res.json();
+        if (data.success && data.token) {
+          localStorage.setItem('xenoecom_auth_token', data.token);
+          currentUser = data.user;
+          setUserState(currentUser);
+          closeAuthModal();
+          alert('Chúc mừng! Bạn đã tạo tài khoản thành công và được tặng 300 đ dùng thử!');
+        } else {
+          errEl.textContent = data.error || 'Đăng ký thất bại!';
+          errEl.classList.remove('hidden');
+        }
+      } catch (err) {
+        errEl.textContent = 'Lỗi kết nối máy chủ!';
+        errEl.classList.remove('hidden');
+      }
+    }
+
+    async function handleLogout() {
+      const token = localStorage.getItem('xenoecom_auth_token');
+      if (token) {
+        fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token }
+        }).catch(() => {});
+      }
+      localStorage.removeItem('xenoecom_auth_token');
+      setGuestState();
+    }
+
+    // Modal nạp tiền
+    function openDepositModal() {
+      if (!currentUser) {
+        openAuthModal('login');
+        return;
+      }
+      document.getElementById('depositModal').classList.remove('hidden');
+      selectDepositAmount(20000);
+    }
+
+    function closeDepositModal() {
+      document.getElementById('depositModal').classList.add('hidden');
+    }
+
+    function selectDepositAmount(amt) {
+      selectedDepositValue = amt;
+      document.getElementById('depositAmountText').textContent = amt.toLocaleString('vi-VN') + ' đ';
+      ['dep20k', 'dep50k', 'dep100k'].forEach(id => {
+        const el = document.getElementById(id);
+        const v = id === 'dep20k' ? 20000 : (id === 'dep50k' ? 50000 : 100000);
+        if (v === amt) {
+          el.className = 'p-2 rounded-xl border border-blue-500 bg-blue-500/10 text-xs text-blue-400 font-bold transition';
+        } else {
+          el.className = 'p-2 rounded-xl border border-gray-700 bg-gray-900 text-xs text-gray-300 font-bold hover:text-white transition';
+        }
+      });
+    }
+
+    // 2. Chuyển đổi tab chế độ
     function switchMode(mode) {
       currentMode = mode;
       const tabText = document.getElementById('tabText');
@@ -413,7 +695,6 @@
         tabMotion.className = 'flex-1 py-2 rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 transition bg-amber-600 text-white shadow';
         imageArea.classList.add('hidden');
         motionArea.classList.remove('hidden');
-        // Ẩn triệt để prompt và cấu hình model/thời lượng/tỉ lệ khi ở Motion Control
         promptSec.classList.add('hidden');
         generalSettings.classList.add('hidden');
       }
@@ -484,20 +765,24 @@
       });
     }
 
+    // Giá bán cho khách (Nhân đôi lợi nhuận)
     function calculatePrice() {
       const priceEl = document.getElementById('priceEstimate');
-      let price = 150;
+      let basePrice = 150;
       if (currentMode === 'motion') {
-        price = 300;
+        basePrice = 300;
       } else {
         const model = document.getElementById('modelSelect').value;
         if (model === '4.0') {
-          price = 200;
+          basePrice = 200;
+        } else if (model === '3.0') {
+          basePrice = 250;
         } else {
-          price = currentDuration === 5 ? 150 : 250;
+          basePrice = currentDuration === 5 ? 150 : 250;
         }
       }
-      priceEl.textContent = price.toLocaleString('vi-VN') + ' đ';
+      const customerPrice = basePrice * 2;
+      priceEl.textContent = customerPrice.toLocaleString('vi-VN') + ' đ';
     }
 
     function applyPrompt(text) {
@@ -575,7 +860,6 @@
       }
     }
 
-    // Tải Motion Control
     async function handleMotionCharSelect(e) {
       if (!e.target.files?.[0]) return;
       const file = e.target.files[0];
@@ -599,7 +883,7 @@
       if (!e.target.files?.[0]) return;
       const file = e.target.files[0];
       const status = document.getElementById('motionVideoStatus');
-      status.textContent = 'Đang tải video (vui lòng chờ)...';
+      status.textContent = 'Đang tải video (chờ chút)...';
       const formData = new FormData();
       formData.append('files', file);
       try {
@@ -614,8 +898,14 @@
       }
     }
 
-    // Bắt đầu tạo video
+    // BẮT ĐẦU TẠO VIDEO (YÊU CẦU ĐĂNG NHẬP & TRỪ TIỀN)
     async function startGeneration() {
+      // 1. Kiểm tra đăng nhập
+      if (!currentUser) {
+        openAuthModal('login');
+        return;
+      }
+
       let prompt = document.getElementById('promptInput').value.trim();
 
       if (currentMode === 'text') {
@@ -639,6 +929,7 @@
 
       const model = currentMode === 'motion' ? '2.6' : document.getElementById('modelSelect').value;
       const audio = document.getElementById('audioToggle').checked;
+      const token = localStorage.getItem('xenoecom_auth_token');
 
       setUIGenerating(true);
 
@@ -663,7 +954,10 @@
       try {
         const res = await fetch('/api/create-video', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
           body: JSON.stringify(payload)
         });
         const data = await res.json();
@@ -671,17 +965,19 @@
         if (data.success && data.jobId) {
           document.getElementById('loadingStepTitle').textContent = 'Đã gửi yêu cầu thành công!';
           document.getElementById('loadingStepDesc').textContent = 'Mã Job: ' + data.jobId;
-          pollJobStatus(data.jobId, prompt);
-          fetchWallet();
-        } else {
-          let errText = 'Lỗi tạo video';
-          if (data.error) {
-            try {
-              const p = JSON.parse(data.error);
-              errText = p.error?.message || data.error;
-            } catch(e) { errText = data.error; }
+          // Cập nhật lại số dư còn lại của khách
+          if (data.remainingBalance !== undefined) {
+            currentUser.balance = data.remainingBalance;
+            document.getElementById('userBalanceText').textContent = Number(data.remainingBalance).toLocaleString('vi-VN') + ' đ';
           }
-          alert('Không thể tạo video: ' + errText);
+          pollJobStatus(data.jobId, prompt);
+        } else {
+          if (data.error === 'INSUFFICIENT_BALANCE') {
+            alert(data.message || 'Số dư không đủ! Vui lòng nạp thêm tiền để tạo video.');
+            openDepositModal();
+          } else {
+            alert('Không thể tạo video: ' + (data.message || data.error || 'Lỗi không xác định'));
+          }
           setUIGenerating(false);
         }
       } catch (err) {
@@ -725,11 +1021,12 @@
               const videoUrl = data.videoUrl || data.job.providerVideoUrl || data.job.providerCdnUrl;
               showVideoResult(videoUrl, promptText);
               setUIGenerating(false);
-              fetchWallet();
+              checkAuth();
             } else if (status === 'failed' || status === 'canceled') {
               clearInterval(activePollingInterval);
-              alert('Video không thành công (' + (data.job.errorCode || 'Lỗi xử lý') + '). Số dư ví đã được hoàn lại.');
+              alert('Video không thành công (' + (data.job.errorCode || 'Lỗi xử lý') + '). Số dư tài khoản đã được tự động hoàn lại cho bạn.');
               setUIGenerating(false);
+              checkAuth();
             }
           }
         } catch (e) {
@@ -819,7 +1116,33 @@
       renderHistory();
     }
 
-    fetchWallet();
+    async function checkSystemStatus() {
+      try {
+        const res = await fetch('/api/system/status');
+        const data = await res.json();
+        if (data.success && data.status) {
+          const banner = document.getElementById('maintenanceBanner');
+          const text = document.getElementById('maintenanceMessageText');
+          const btn = document.getElementById('btnGenerate');
+          const btnText = document.getElementById('btnGenerateText');
+          if (data.status.maintenance) {
+            banner.classList.remove('hidden');
+            if (data.status.maintenanceMessage) text.textContent = data.status.maintenanceMessage;
+            btn.disabled = true;
+            btnText.textContent = 'Máy Chủ Đang Bảo Trì...';
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+          } else {
+            banner.classList.add('hidden');
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // Khởi chạy khi vào web
+    checkAuth();
+    checkSystemStatus();
     renderHistory();
     onModelChange();
   </script>
