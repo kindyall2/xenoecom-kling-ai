@@ -92,10 +92,10 @@
     
     <div class="text-center mb-6">
       <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1 bg-gradient-to-r from-white via-blue-100 to-blue-400 bg-clip-text text-transparent">
-        Xưởng Tạo Video Điện Ảnh Kling AI
+        Kling AI Studio
       </h2>
       <p class="text-gray-400 max-w-lg mx-auto text-xs sm:text-sm">
-        Đăng ký tài khoản và nạp tiền để bắt đầu tạo video AI đỉnh cao với chi phí tiết kiệm.
+        Tạo video điện ảnh từ văn bản, hình ảnh hoặc điều khiển chuyển động nhân vật.
       </p>
     </div>
 
@@ -597,7 +597,6 @@
       const p = document.getElementById('regPassword').value;
       const errEl = document.getElementById('regErrorText');
       errEl.classList.add('hidden');
-
       try {
         const res = await fetch('/api/auth/register', {
           method: 'POST',
