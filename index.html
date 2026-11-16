@@ -95,7 +95,7 @@
         Xưởng Tạo Video Điện Ảnh Kling AI
       </h2>
       <p class="text-gray-400 max-w-lg mx-auto text-xs sm:text-sm">
-        Đăng ký tài khoản nhận ngay quà tặng trải nghiệm và bắt đầu tạo video AI đỉnh cao.
+        Đăng ký tài khoản và nạp tiền để bắt đầu tạo video AI đỉnh cao với chi phí tiết kiệm.
       </p>
     </div>
 
@@ -408,9 +408,6 @@
 
       <!-- Form Đăng Ký -->
       <form id="registerForm" onsubmit="handleRegisterSubmit(event)" class="hidden space-y-3.5">
-        <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 text-center font-medium">
-          🎁 Đăng ký ngay hôm nay nhận ngay <strong>300 đ</strong> tạo video trải nghiệm!
-        </div>
         <div>
           <label class="block text-xs font-semibold text-gray-300 mb-1">Tên đăng nhập</label>
           <input type="text" id="regUsername" required placeholder="Viết liền không dấu, ví dụ: namnguyen" class="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white focus:outline-none focus:border-blue-500">
@@ -613,7 +610,7 @@
           currentUser = data.user;
           setUserState(currentUser);
           closeAuthModal();
-          alert('Chúc mừng! Bạn đã tạo tài khoản thành công và được tặng 300 đ dùng thử!');
+          alert('Chúc mừng! Bạn đã tạo tài khoản thành công. Vui lòng nạp tiền vào tài khoản để bắt đầu tạo video nhé!');
         } else {
           errEl.textContent = data.error || 'Đăng ký thất bại!';
           errEl.classList.remove('hidden');
