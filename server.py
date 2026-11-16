@@ -636,8 +636,7 @@ def run():
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
-            print("
-Da dung server.")
+            print("Da dung server.")
 
 if __name__ == "__main__":
     run()
