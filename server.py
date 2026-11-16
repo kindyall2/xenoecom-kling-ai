@@ -275,8 +275,25 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                 with urllib.request.urlopen(req, timeout=10) as res:
                     data = json.loads(res.read().decode("utf-8"))
                     self.send_json(200, {"success": True, "status": data})
+            except urllib.error.HTTPError as e:
+                if e.code == 503:
+                    self.send_json(200, {
+                        "success": True,
+                        "status": {
+                            "maintenance": True,
+                            "maintenanceMessage": "Hệ thống đang bảo trì để nâng cấp (dự kiến hoàn tất trong khoảng 10 phút). Video đang render vẫn tiếp tục bình thường."
+                        }
+                    })
+                    return
+                self.send_json(e.code, {"success": False, "error": str(e)})
             except Exception as e:
-                self.send_json(500, {"success": False, "error": str(e)})
+                self.send_json(200, {
+                    "success": True,
+                    "status": {
+                        "maintenance": True,
+                        "maintenanceMessage": "Máy chủ AI đang bảo trì định kỳ. Quý khách vui lòng quay lại sau ít phút!"
+                    }
+                })
             return
 
         # API: Kiểm tra trạng thái Job (/api/job/501)
@@ -619,7 +636,8 @@ def run():
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
-            print("\nDa dung server.")
+            print("
+Da dung server.")
 
 if __name__ == "__main__":
     run()
