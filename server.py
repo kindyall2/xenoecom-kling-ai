@@ -1,6 +1,6 @@
 """
-Kling AI Video Generator Backend
-Hệ thống kết nối trực tiếp với Klinggiare API
+Kling AI Video Generator Backend - Xenoecom Studio
+Hệ thống kết nối Klinggiare API + Quản lý Tài khoản & Số dư Khách hàng (SQLite)
 Không yêu cầu cài thêm thư viện (chạy 100% bằng Python tiêu chuẩn)
 """
 
@@ -11,11 +11,71 @@ import urllib.request
 import urllib.error
 import uuid
 import os
-import mimetypes
+import sqlite3
+import hashlib
+import time
 
 PORT = int(os.environ.get("PORT", 8080))
 API_BASE = "https://klinggiare.com"
 API_KEY = os.environ.get("KLING_API_KEY", "kling_sk_6bV7-Nvtk9GruKUDL-uMl0OfUXQEldZt_3lQF0MyLhE")
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "users.db")
+
+# Khởi tạo Cơ sở dữ liệu SQLite
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    # Bảng người dùng
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        balance INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+    # Bảng phiên đăng nhập (Sessions)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS sessions (
+        token TEXT PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    )
+    """)
+    # Bảng lịch sử video của khách
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS user_videos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        job_id INTEGER,
+        prompt TEXT,
+        video_url TEXT,
+        cost INTEGER,
+        status TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+    conn.commit()
+    conn.close()
+
+init_db()
+
+def hash_password(password):
+    return hashlib.sha256(("xenoecom_salt_" + password).encode("utf-8")).hexdigest()
+
+def get_db():
+    return sqlite3.connect(DB_PATH)
+
+def get_customer_price(model, duration_seconds, is_motion):
+    if is_motion:
+        return 600
+    if model == "4.0":
+        return 400
+    if model == "3.0":
+        return 500
+    return 300 if int(duration_seconds) == 5 else 500
 
 class KlingHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -39,41 +99,45 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def get_authenticated_user(self):
+        auth_header = self.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return None
+        token = auth_header.split(" ")[1].strip()
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT users.id, users.username, users.email, users.balance FROM sessions JOIN users ON sessions.user_id = users.id WHERE sessions.token = ?", (token,))
+        row = c.fetchone()
+        conn.close()
+        if row:
+            return {"id": row[0], "username": row[1], "email": row[2], "balance": row[3], "token": token}
+        return None
+
     def do_GET(self):
         path = self.path.split("?")[0]
         
-        # API: Lấy thông tin số dư ví
-        if path == "/api/wallet":
-            try:
-                req = urllib.request.Request(
-                    f"{API_BASE}/api/v1/ext/wallet",
-                    headers={
-                        "Authorization": f"Bearer {API_KEY}",
-                        "User-Agent": "Mozilla/5.0"
-                    }
-                )
-                with urllib.request.urlopen(req, timeout=10) as res:
-                    data = json.loads(res.read().decode("utf-8"))
-                    self.send_json(200, {"success": True, "wallet": data})
-            except urllib.error.HTTPError as e:
-                err_content = e.read().decode("utf-8")
-                self.send_json(e.code, {"success": False, "error": err_content})
-            except Exception as e:
-                self.send_json(500, {"success": False, "error": str(e)})
+        # API: Lấy thông tin tài khoản hiện tại
+        if path == "/api/auth/me":
+            user = self.get_authenticated_user()
+            if not user:
+                self.send_json(401, {"success": False, "error": "Chưa đăng nhập"})
+            else:
+                self.send_json(200, {"success": True, "user": user})
             return
 
-        # API: Lấy bảng giá & mô hình
-        if path == "/api/prices":
-            try:
-                req = urllib.request.Request(
-                    f"{API_BASE}/api/v1/prices",
-                    headers={"User-Agent": "Mozilla/5.0"}
-                )
-                with urllib.request.urlopen(req, timeout=10) as res:
-                    data = json.loads(res.read().decode("utf-8"))
-                    self.send_json(200, {"success": True, "prices": data})
-            except Exception as e:
-                self.send_json(500, {"success": False, "error": str(e)})
+        # API: Lấy lịch sử video của khách
+        if path == "/api/user/videos":
+            user = self.get_authenticated_user()
+            if not user:
+                self.send_json(401, {"success": False, "error": "Chưa đăng nhập"})
+                return
+            conn = get_db()
+            c = conn.cursor()
+            c.execute("SELECT job_id, prompt, video_url, cost, status, created_at FROM user_videos WHERE user_id = ? ORDER BY id DESC LIMIT 20", (user["id"],))
+            rows = c.fetchall()
+            conn.close()
+            videos = [{"jobId": r[0], "prompt": r[1], "videoUrl": r[2], "cost": r[3], "status": r[4], "time": r[5]} for r in rows]
+            self.send_json(200, {"success": True, "videos": videos})
             return
 
         # API: Kiểm tra trạng thái bảo trì hệ thống
@@ -103,8 +167,6 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                 )
                 with urllib.request.urlopen(req, timeout=10) as res:
                     job_data = json.loads(res.read().decode("utf-8"))
-                    
-                    # Nếu job thành công, tự động lấy luôn video download URL
                     video_url = None
                     if job_data.get("status") == "success":
                         try:
@@ -121,6 +183,14 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                         except Exception:
                             video_url = job_data.get("providerVideoUrl") or job_data.get("providerCdnUrl")
 
+                        # Cập nhật link video vào database nếu có
+                        if video_url:
+                            conn = get_db()
+                            c = conn.cursor()
+                            c.execute("UPDATE user_videos SET video_url = ?, status = 'success' WHERE job_id = ?", (video_url, job_id))
+                            conn.commit()
+                            conn.close()
+
                     self.send_json(200, {
                         "success": True, 
                         "job": job_data,
@@ -132,64 +202,163 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_json(500, {"success": False, "error": str(e)})
             return
 
-        # Mặc định: Phục vụ file tĩnh (HTML, CSS, JS) trong thư mục public
         super().do_GET()
 
     def do_POST(self):
         path = self.path.split("?")[0]
         content_length = int(self.headers.get("Content-Length", 0))
 
-        # API: Báo giá ước tính (Quote)
-        if path == "/api/quote":
+        # API: ĐĂNG KÝ TÀI KHOẢN MỚI
+        if path == "/api/auth/register":
             body = self.rfile.read(content_length)
             try:
-                req_data = json.loads(body.decode("utf-8"))
-                req = urllib.request.Request(
-                    f"{API_BASE}/api/v1/ext/batches/quote",
-                    data=json.dumps(req_data).encode("utf-8"),
-                    headers={
-                        "Authorization": f"Bearer {API_KEY}",
-                        "Content-Type": "application/json",
-                        "User-Agent": "Mozilla/5.0"
-                    }
-                )
-                with urllib.request.urlopen(req, timeout=10) as res:
-                    quote_data = json.loads(res.read().decode("utf-8"))
-                    self.send_json(200, {"success": True, "quote": quote_data})
-            except urllib.error.HTTPError as e:
-                self.send_json(e.code, {"success": False, "error": e.read().decode("utf-8")})
+                data = json.loads(body.decode("utf-8"))
+                username = data.get("username", "").strip()
+                email = data.get("email", "").strip()
+                password = data.get("password", "")
+
+                if not username or not email or not password:
+                    self.send_json(400, {"success": False, "error": "Vui lòng điền đủ tên đăng nhập, email và mật khẩu!"})
+                    return
+
+                if len(password) < 6:
+                    self.send_json(400, {"success": False, "error": "Mật khẩu tối thiểu phải từ 6 ký tự!"})
+                    return
+
+                conn = get_db()
+                c = conn.cursor()
+                # Kiểm tra trùng lặp
+                c.execute("SELECT id FROM users WHERE username = ? OR email = ?", (username, email))
+                if c.fetchone():
+                    conn.close()
+                    self.send_json(400, {"success": False, "error": "Tên đăng nhập hoặc Email này đã được sử dụng!"})
+                    return
+
+                # Tặng thử 300đ cho khách tạo thử video đầu tiên!
+                initial_balance = 300 
+                pwd_hash = hash_password(password)
+                c.execute("INSERT INTO users (username, email, password_hash, balance) VALUES (?, ?, ?, ?)",
+                          (username, email, pwd_hash, initial_balance))
+                user_id = c.lastrowid
+
+                # Tạo session token
+                token = str(uuid.uuid4())
+                c.execute("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)",
+                          (token, user_id, int(time.time())))
+                conn.commit()
+                conn.close()
+
+                self.send_json(200, {
+                    "success": True,
+                    "token": token,
+                    "user": {"id": user_id, "username": username, "email": email, "balance": initial_balance}
+                })
             except Exception as e:
                 self.send_json(500, {"success": False, "error": str(e)})
             return
 
-        # API: Tạo video (Tạo Batch)
+        # API: ĐĂNG NHẬP
+        if path == "/api/auth/login":
+            body = self.rfile.read(content_length)
+            try:
+                data = json.loads(body.decode("utf-8"))
+                username = data.get("username", "").strip()
+                password = data.get("password", "")
+
+                if not username or not password:
+                    self.send_json(400, {"success": False, "error": "Vui lòng nhập tên đăng nhập và mật khẩu!"})
+                    return
+
+                conn = get_db()
+                c = conn.cursor()
+                pwd_hash = hash_password(password)
+                c.execute("SELECT id, username, email, balance FROM users WHERE (username = ? OR email = ?) AND password_hash = ?",
+                          (username, username, pwd_hash))
+                row = c.fetchone()
+                if not row:
+                    conn.close()
+                    self.send_json(400, {"success": False, "error": "Tên đăng nhập hoặc mật khẩu không chính xác!"})
+                    return
+
+                user_id = row[0]
+                token = str(uuid.uuid4())
+                c.execute("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)",
+                          (token, user_id, int(time.time())))
+                conn.commit()
+                conn.close()
+
+                self.send_json(200, {
+                    "success": True,
+                    "token": token,
+                    "user": {"id": user_id, "username": row[1], "email": row[2], "balance": row[3]}
+                })
+            except Exception as e:
+                self.send_json(500, {"success": False, "error": str(e)})
+            return
+
+        # API: ĐĂNG XUẤT
+        if path == "/api/auth/logout":
+            auth_header = self.headers.get("Authorization", "")
+            if auth_header.startswith("Bearer "):
+                token = auth_header.split(" ")[1].strip()
+                conn = get_db()
+                c = conn.cursor()
+                c.execute("DELETE FROM sessions WHERE token = ?", (token,))
+                conn.commit()
+                conn.close()
+            self.send_json(200, {"success": True})
+            return
+
+        # API: TẠO VIDEO (CÓ KIỂM TRA & TRỪ TIỀN KHÁCH HÀNG)
         if path == "/api/create-video":
+            user = self.get_authenticated_user()
+            if not user:
+                self.send_json(401, {"success": False, "error": "AUTH_REQUIRED", "message": "Vui lòng đăng nhập hoặc tạo tài khoản trước khi tạo video!"})
+                return
+
             body = self.rfile.read(content_length)
             try:
                 req_data = json.loads(body.decode("utf-8"))
-                
-                # Payload gửi sang Klinggiare
+                model = req_data.get("model", "4.0-flash")
+                duration = int(req_data.get("durationSeconds", 5))
+                is_motion = bool(req_data.get("motionVideoObjectKey"))
+
+                # Tính giá bán lẻ cho khách (Gấp đôi giá gốc để có lợi nhuận)
+                cost = get_customer_price(model, duration, is_motion)
+
+                # Kiểm tra số dư của khách hàng
+                if user["balance"] < cost:
+                    self.send_json(402, {
+                        "success": False,
+                        "error": "INSUFFICIENT_BALANCE",
+                        "message": f"Số dư của bạn không đủ ({user['balance']} đ). Lượt này cần {cost} đ. Vui lòng nạp thêm tiền để tiếp tục!"
+                    })
+                    return
+
+                # Trừ tiền tài khoản của khách trước
+                conn = get_db()
+                c = conn.cursor()
+                new_balance = user["balance"] - cost
+                c.execute("UPDATE users SET balance = ? WHERE id = ?", (new_balance, user["id"]))
+                conn.commit()
+
+                # Chuẩn bị payload gửi sang Klinggiare
                 batch_payload = {
-                    "prompt": req_data.get("prompt"),
+                    "prompt": req_data.get("prompt") or "Video chất lượng cao",
                     "settings": {
-                        "model": req_data.get("model", "4.0-flash"),
-                        "durationSeconds": int(req_data.get("durationSeconds", 5)),
+                        "model": model,
+                        "durationSeconds": duration,
                         "aspectRatio": req_data.get("aspectRatio", "16:9"),
-                        "resolution": req_data.get("resolution", "720p"),
+                        "resolution": "720p",
                         "audio": bool(req_data.get("audio", True))
                     }
                 }
                 
-                # Nếu có ảnh đầu vào (Image to Video)
                 if req_data.get("imageKeys"):
                     batch_payload["imageKeys"] = req_data.get("imageKeys")
-
-                # Nếu có ảnh cuối (End Frame / Tail Image)
                 if req_data.get("endFrameKey"):
                     batch_payload["endFrameKey"] = req_data.get("endFrameKey")
-
-                # Nếu là Motion Control (Bắt chước video)
-                if req_data.get("motionVideoObjectKey"):
+                if is_motion:
                     batch_payload["jobType"] = "motion_control"
                     batch_payload["motionVideoObjectKey"] = req_data.get("motionVideoObjectKey")
                     batch_payload["keepOriginalSound"] = req_data.get("keepOriginalSound", True)
@@ -198,6 +367,7 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
 
                 idempotency_key = str(uuid.uuid4())
 
+                # Gọi API Klinggiare
                 req = urllib.request.Request(
                     f"{API_BASE}/api/v1/ext/batches",
                     data=json.dumps(batch_payload).encode("utf-8"),
@@ -208,24 +378,40 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                         "User-Agent": "Mozilla/5.0"
                     }
                 )
-                with urllib.request.urlopen(req, timeout=15) as res:
-                    batch_data = json.loads(res.read().decode("utf-8"))
-                    jobs = batch_data.get("jobs", [])
-                    job_id = jobs[0].get("id") if jobs else None
-                    self.send_json(200, {
-                        "success": True, 
-                        "batch": batch_data,
-                        "jobId": job_id
-                    })
+                
+                try:
+                    with urllib.request.urlopen(req, timeout=15) as res:
+                        batch_data = json.loads(res.read().decode("utf-8"))
+                        jobs = batch_data.get("jobs", [])
+                        job_id = jobs[0].get("id") if jobs else None
+                        
+                        # Lưu lịch sử tạo video vào DB
+                        c.execute("INSERT INTO user_videos (user_id, job_id, prompt, cost, status) VALUES (?, ?, ?, ?, 'processing')",
+                                  (user["id"], job_id, batch_payload["prompt"], cost))
+                        conn.commit()
+                        conn.close()
+
+                        self.send_json(200, {
+                            "success": True, 
+                            "batch": batch_data,
+                            "jobId": job_id,
+                            "remainingBalance": new_balance
+                        })
+                except Exception as api_err:
+                    # NẾU API LỖI -> HOÀN LẠI TIỀN CHO KHÁCH NGAY LẬP TỨC!
+                    c.execute("UPDATE users SET balance = balance + ? WHERE id = ?", (cost, user["id"]))
+                    conn.commit()
+                    conn.close()
+                    raise api_err
+
             except urllib.error.HTTPError as e:
                 self.send_json(e.code, {"success": False, "error": e.read().decode("utf-8")})
             except Exception as e:
                 self.send_json(500, {"success": False, "error": str(e)})
             return
 
-        # API: Tải ảnh lên (Upload ảnh trực tiếp)
+        # API: Tải ảnh/video lên Klinggiare
         if path == "/api/upload-image":
-            # Chuyển tiếp trực tiếp multipart data sang klinggiare
             content_type = self.headers.get("Content-Type")
             body = self.rfile.read(content_length)
             try:
@@ -253,12 +439,8 @@ def run():
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("", PORT), KlingHandler) as httpd:
-        print(f"=====================================================")
         print(f"🚀 XENOECOM KLING AI WEB SERVER DANG CHAY TAI:")
         print(f"👉 http://localhost:{PORT}")
-        print(f"👉 http://127.0.0.1:{PORT}")
-        print(f"=====================================================")
-        print(f"Nhan Ctrl+C de dung server.")
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
