@@ -1,6 +1,6 @@
 """
 Kling AI Video Generator Backend - Xenoecom Studio
-Hệ thống kết nối Klinggiare API + Quản lý Tài khoản & Số dư Khách hàng (SQLite)
+Hệ thống kết nối Klinggiare API + Quản lý Tài khoản & Số dư Khách hàng (SQLite) + Quản trị Admin
 Không yêu cầu cài thêm thư viện (chạy 100% bằng Python tiêu chuẩn)
 """
 
@@ -18,6 +18,9 @@ import time
 PORT = int(os.environ.get("PORT", 8080))
 API_BASE = "https://klinggiare.com"
 API_KEY = os.environ.get("KLING_API_KEY", "kling_sk_6bV7-Nvtk9GruKUDL-uMl0OfUXQEldZt_3lQF0MyLhE")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "xenoecom@admin2026")
+ADMIN_TOKENS = set()
+
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "users.db")
 
 # Khởi tạo Cơ sở dữ liệu SQLite
@@ -87,7 +90,7 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-Token")
         self.end_headers()
 
     def send_json(self, status_code, data):
@@ -113,8 +116,130 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
             return {"id": row[0], "username": row[1], "email": row[2], "balance": row[3], "token": token}
         return None
 
+    def is_admin_authenticated(self):
+        token = self.headers.get("X-Admin-Token", "").strip()
+        return bool(token and token in ADMIN_TOKENS)
+
     def do_GET(self):
         path = self.path.split("?")[0]
+
+        # ROUTE: Trang Admin Panel (/admin)
+        if path in ["/admin", "/admin/"]:
+            admin_file = os.path.join(os.path.dirname(__file__), "public", "admin.html")
+            if not os.path.exists(admin_file):
+                admin_file = os.path.join(os.path.dirname(__file__), "admin.html")
+            if os.path.exists(admin_file):
+                with open(admin_file, "rb") as f:
+                    content = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(content)))
+                self.end_headers()
+                self.wfile.write(content)
+                return
+
+        # API ADMIN: Thống kê tổng quan (/api/admin/stats)
+        if path == "/api/admin/stats":
+            if not self.is_admin_authenticated():
+                self.send_json(401, {"success": False, "error": "Yêu cầu quyền Quản trị viên!"})
+                return
+            try:
+                conn = get_db()
+                c = conn.cursor()
+                c.execute("SELECT COUNT(*), COALESCE(SUM(balance), 0) FROM users")
+                total_users, total_user_balance = c.fetchone()
+                c.execute("SELECT COUNT(*) FROM user_videos WHERE status = 'success'")
+                total_videos = c.fetchone()[0]
+                conn.close()
+
+                # Lấy số dư ví Klinggiare gốc
+                kling_balance = 0
+                try:
+                    req = urllib.request.Request(
+                        f"{API_BASE}/api/v1/ext/wallet",
+                        headers={"Authorization": f"Bearer {API_KEY}", "User-Agent": "Mozilla/5.0"}
+                    )
+                    with urllib.request.urlopen(req, timeout=8) as res:
+                        w_data = json.loads(res.read().decode("utf-8"))
+                        kling_balance = w_data.get("balance", 0)
+                except Exception as e:
+                    print("Error fetching Kling wallet:", e)
+
+                self.send_json(200, {
+                    "success": True,
+                    "totalUsers": total_users,
+                    "totalUserBalance": total_user_balance,
+                    "totalVideos": total_videos,
+                    "klingWalletBalance": kling_balance
+                })
+            except Exception as e:
+                self.send_json(500, {"success": False, "error": str(e)})
+            return
+
+        # API ADMIN: Danh sách tất cả khách hàng (/api/admin/users)
+        if path == "/api/admin/users":
+            if not self.is_admin_authenticated():
+                self.send_json(401, {"success": False, "error": "Yêu cầu quyền Quản trị viên!"})
+                return
+            try:
+                conn = get_db()
+                c = conn.cursor()
+                c.execute("""
+                    SELECT u.id, u.username, u.email, u.balance, u.created_at, COUNT(v.id) as video_count
+                    FROM users u
+                    LEFT JOIN user_videos v ON u.id = v.user_id AND v.status = 'success'
+                    GROUP BY u.id
+                    ORDER BY u.id DESC
+                """)
+                rows = c.fetchall()
+                conn.close()
+                user_list = [
+                    {
+                        "id": r[0],
+                        "username": r[1],
+                        "email": r[2],
+                        "balance": r[3],
+                        "created_at": r[4],
+                        "videoCount": r[5]
+                    }
+                    for r in rows
+                ]
+                self.send_json(200, {"success": True, "users": user_list})
+            except Exception as e:
+                self.send_json(500, {"success": False, "error": str(e)})
+            return
+
+        # API ADMIN: Danh sách tất cả video (/api/admin/videos)
+        if path == "/api/admin/videos":
+            if not self.is_admin_authenticated():
+                self.send_json(401, {"success": False, "error": "Yêu cầu quyền Quản trị viên!"})
+                return
+            try:
+                conn = get_db()
+                c = conn.cursor()
+                c.execute("""
+                    SELECT u.username, v.prompt, v.video_url, v.cost, v.created_at
+                    FROM user_videos v
+                    JOIN users u ON v.user_id = u.id
+                    WHERE v.video_url IS NOT NULL AND v.video_url != ''
+                    ORDER BY v.id DESC LIMIT 40
+                """)
+                rows = c.fetchall()
+                conn.close()
+                vid_list = [
+                    {
+                        "username": r[0],
+                        "prompt": r[1],
+                        "videoUrl": r[2],
+                        "cost": r[3],
+                        "time": r[4]
+                    }
+                    for r in rows
+                ]
+                self.send_json(200, {"success": True, "videos": vid_list})
+            except Exception as e:
+                self.send_json(500, {"success": False, "error": str(e)})
+            return
         
         # API: Lấy thông tin tài khoản hiện tại
         if path == "/api/auth/me":
@@ -207,6 +332,56 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         path = self.path.split("?")[0]
         content_length = int(self.headers.get("Content-Length", 0))
+
+        # API ADMIN: Đăng nhập Admin (/api/admin/login)
+        if path == "/api/admin/login":
+            body = self.rfile.read(content_length)
+            try:
+                data = json.loads(body.decode("utf-8"))
+                pwd = data.get("password", "")
+                if pwd == ADMIN_PASSWORD:
+                    token = "xenoecom_adm_" + str(uuid.uuid4())
+                    ADMIN_TOKENS.add(token)
+                    self.send_json(200, {"success": True, "adminToken": token})
+                else:
+                    self.send_json(400, {"success": False, "error": "Mật khẩu Quản trị Admin không chính xác!"})
+            except Exception as e:
+                self.send_json(500, {"success": False, "error": str(e)})
+            return
+
+        # API ADMIN: Nạp / Cộng / Trừ tiền khách hàng (/api/admin/users/adjust-balance)
+        if path == "/api/admin/users/adjust-balance":
+            if not self.is_admin_authenticated():
+                self.send_json(401, {"success": False, "error": "Yêu cầu quyền Quản trị viên!"})
+                return
+            body = self.rfile.read(content_length)
+            try:
+                data = json.loads(body.decode("utf-8"))
+                user_id = data.get("userId")
+                amount = int(data.get("amount", 0))
+                action = data.get("action", "add")
+
+                if not user_id or amount <= 0:
+                    self.send_json(400, {"success": False, "error": "Dữ liệu không hợp lệ!"})
+                    return
+
+                diff = amount if action == "add" else -amount
+                conn = get_db()
+                c = conn.cursor()
+                c.execute("UPDATE users SET balance = MAX(0, balance + ?) WHERE id = ?", (diff, user_id))
+                c.execute("SELECT balance FROM users WHERE id = ?", (user_id,))
+                row = c.fetchone()
+                conn.commit()
+                conn.close()
+
+                if not row:
+                    self.send_json(404, {"success": False, "error": "Không tìm thấy khách hàng!"})
+                    return
+
+                self.send_json(200, {"success": True, "newBalance": row[0]})
+            except Exception as e:
+                self.send_json(500, {"success": False, "error": str(e)})
+            return
 
         # API: ĐĂNG KÝ TÀI KHOẢN MỚI
         if path == "/api/auth/register":
