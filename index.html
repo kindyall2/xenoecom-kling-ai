@@ -3,14 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Xenoecom AI Video Studio - Kling AI Professional</title>
-  <!-- Tailwind CSS CDN -->
+  <title>Xenoecom AI Video Studio - Kling AI Pro</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     tailwind.config = {
@@ -25,22 +22,9 @@
     }
   </script>
   <style>
-    body {
-      background-color: #0b0f19;
-      color: #f3f4f6;
-    }
-    .gradient-glow {
-      background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15), transparent 70%);
-    }
-    .glass-card {
-      background: rgba(17, 24, 39, 0.75);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    .badge-highlight {
-      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(99, 102, 241, 0.2));
-      border: 1px solid rgba(59, 130, 246, 0.4);
-    }
+    body { background-color: #0b0f19; color: #f3f4f6; }
+    .gradient-glow { background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.12), transparent 70%); }
+    .glass-card { background: rgba(17, 24, 39, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
   </style>
 </head>
 <body class="min-h-screen font-sans selection:bg-blue-600 selection:text-white">
@@ -50,52 +34,50 @@
   <!-- Header -->
   <header class="sticky top-0 z-50 glass-card border-b border-gray-800/80 px-4 sm:px-8 py-3 flex items-center justify-between">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/25">
-        <i data-lucide="sparkles" class="w-5 h-5 text-white"></i>
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/25">
+        <i data-lucide="sparkles" class="w-4 h-4 text-white"></i>
       </div>
       <div>
-        <h1 class="text-base sm:text-lg font-bold tracking-tight flex items-center gap-2">
+        <h1 class="text-base font-bold tracking-tight flex items-center gap-2">
           xenoecom<span class="text-blue-500">.cloud</span>
-          <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Kling AI Studio</span>
+          <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Kling AI Studio</span>
         </h1>
-        <p class="text-[11px] text-gray-400 hidden sm:block">Xưởng tạo video AI điện ảnh thông minh</p>
       </div>
     </div>
 
     <!-- Số dư ví -->
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-2">
       <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-800/90 border border-gray-700/80 text-xs">
         <i data-lucide="wallet" class="w-3.5 h-3.5 text-emerald-400"></i>
-        <span class="text-gray-400">Số dư ví:</span>
+        <span class="text-gray-400">Ví:</span>
         <span id="walletBalance" class="font-bold text-emerald-400">Đang tải...</span>
       </div>
-      <button onclick="fetchWallet()" title="Làm mới số dư" class="p-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition">
-        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+      <button onclick="fetchWallet()" title="Làm mới ví" class="p-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition">
+        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
       </button>
     </div>
   </header>
 
-  <!-- Main Content -->
   <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 relative z-10">
     
     <div class="text-center mb-6">
-      <h2 class="text-2xl sm:text-4xl font-extrabold tracking-tight mb-2 bg-gradient-to-r from-white via-blue-100 to-blue-400 bg-clip-text text-transparent">
-        Sáng Tạo Video Điện Ảnh Với Kling AI
+      <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1 bg-gradient-to-r from-white via-blue-100 to-blue-400 bg-clip-text text-transparent">
+        Xưởng Tạo Video Điện Ảnh Kling AI
       </h2>
-      <p class="text-gray-400 max-w-xl mx-auto text-xs sm:text-sm">
-        Hỗ trợ đầy đủ các mô hình Kling 4.0 Flash, 4.0 Pro, 2.6 và công nghệ Motion Control bắt chước chuyển động.
+      <p class="text-gray-400 max-w-lg mx-auto text-xs sm:text-sm">
+        Tạo video từ văn bản, hình ảnh hoặc điều khiển nhân vật chuyển động theo video mẫu.
       </p>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
       
-      <!-- CỘT TRÁI: ĐIỀU KHIỂN TẠO VIDEO (7 Cột) -->
-      <div class="lg:col-span-7 space-y-5">
+      <!-- CỘT TRÁI: ĐIỀU KHIỂN (7 Cột) -->
+      <div class="lg:col-span-7 space-y-4">
         
-        <div class="glass-card rounded-2xl p-5 sm:p-6 shadow-xl">
+        <div class="glass-card rounded-2xl p-5 shadow-xl">
           
-          <!-- 3 Tab Chế độ -->
-          <div class="flex p-1 bg-gray-900/90 rounded-xl mb-5 border border-gray-800 gap-1">
+          <!-- 3 Tab Chế độ chính -->
+          <div class="flex p-1 bg-gray-900/90 rounded-xl mb-4 border border-gray-800 gap-1">
             <button id="tabText" onclick="switchMode('text')" class="flex-1 py-2 rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 transition bg-blue-600 text-white shadow">
               <i data-lucide="type" class="w-3.5 h-3.5"></i> Chữ Sang Video
             </button>
@@ -107,101 +89,102 @@
             </button>
           </div>
 
-          <!-- KHU VỰC TẢI ẢNH (Image to Video) -->
-          <div id="imageUploadArea" class="hidden mb-5">
-            <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
-              Ảnh đầu vào (Gốc)
-            </label>
-            <div id="dropZone" class="border-2 border-dashed border-gray-700 hover:border-blue-500 rounded-xl p-4 text-center cursor-pointer transition bg-gray-900/50">
+          <!-- ================= CHẾ ĐỘ 1 & 2: ẢNH SANG VIDEO ================= -->
+          <div id="imageUploadArea" class="hidden mb-4">
+            <div id="dropZone" class="border-2 border-dashed border-gray-700 hover:border-blue-500 rounded-xl p-4 text-center cursor-pointer transition bg-gray-900/40">
               <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
               
               <div id="uploadPlaceholder" class="space-y-1">
                 <div class="w-10 h-10 mx-auto rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center">
                   <i data-lucide="upload-cloud" class="w-5 h-5"></i>
                 </div>
-                <p class="text-xs font-medium text-gray-200">Nhấp để chọn ảnh hoặc kéo thả ảnh vào đây</p>
-                <p class="text-[11px] text-gray-500">Hỗ trợ JPG, PNG, WEBP (tối đa 10MB)</p>
+                <p class="text-xs font-medium text-gray-200">Nhấp để chọn ảnh hoặc kéo thả vào đây</p>
+                <p class="text-[11px] text-gray-500">Hỗ trợ JPG, PNG, WEBP</p>
               </div>
 
               <div id="imagePreviewContainer" class="hidden relative inline-block">
-                <img id="imagePreview" src="" alt="Preview" class="max-h-40 rounded-lg shadow border border-gray-700 mx-auto object-cover">
+                <img id="imagePreview" src="" alt="Preview" class="max-h-36 rounded-lg shadow border border-gray-700 mx-auto object-cover">
                 <button type="button" onclick="removeImage(event)" class="absolute -top-2 -right-2 bg-red-600 text-white p-1 rounded-full shadow hover:bg-red-500 transition">
-                  <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                  <i data-lucide="x" class="w-3 h-3"></i>
                 </button>
                 <p id="uploadStatusText" class="text-xs text-emerald-400 mt-1 font-medium flex items-center justify-center gap-1">
-                  <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Đã tải ảnh lên
+                  <i data-lucide="check-circle" class="w-3 h-3"></i> Đã tải ảnh lên
                 </p>
               </div>
             </div>
 
-            <!-- Tùy chọn Ảnh cuối (End Frame) -->
-            <div class="mt-3 p-3 rounded-xl bg-gray-900/70 border border-gray-800">
-              <div class="flex items-center justify-between">
-                <span class="text-xs text-gray-300 flex items-center gap-1.5">
-                  <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-400"></i> Thêm ảnh kết thúc (End Frame / Chuyển cảnh)
-                </span>
-                <input type="checkbox" id="endFrameToggle" onchange="toggleEndFrame(this)" class="w-4 h-4 rounded text-blue-600 bg-gray-800 border-gray-600 focus:ring-blue-500 cursor-pointer">
-              </div>
-              <div id="endFrameUploadArea" class="hidden mt-2 pt-2 border-t border-gray-800">
+            <!-- Tùy chọn ảnh cuối (End frame) -->
+            <div class="mt-2.5 flex items-center justify-between p-2.5 rounded-xl bg-gray-900/60 border border-gray-800 text-xs text-gray-300">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="split" class="w-3.5 h-3.5 text-indigo-400"></i> Thêm ảnh kết thúc (End frame)
+              </span>
+              <div class="flex items-center gap-2">
                 <input type="file" id="endFileInput" accept="image/*" class="hidden" onchange="handleEndFileSelect(event)">
-                <button type="button" onclick="document.getElementById('endFileInput').click()" class="w-full py-2 px-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs text-gray-300 flex items-center justify-center gap-2 border border-gray-700">
-                  <i data-lucide="upload" class="w-3.5 h-3.5"></i> Chọn ảnh kết thúc (Tail Image)
+                <button type="button" onclick="document.getElementById('endFileInput').click()" class="px-2.5 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-[11px] text-gray-300 border border-gray-700">
+                  Chọn ảnh cuối
                 </button>
-                <p id="endFrameStatusText" class="text-[11px] text-gray-500 mt-1 text-center"></p>
+                <span id="endFrameStatusText" class="text-[11px] text-emerald-400 font-medium"></span>
               </div>
             </div>
           </div>
 
-          <!-- KHU VỰC MOTION CONTROL (Tải video mẫu) -->
-          <div id="motionUploadArea" class="hidden mb-5 space-y-3">
-            <div class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 flex items-start gap-2">
+          <!-- ================= CHẾ ĐỘ 3: MOTION CONTROL (TINH GỌN) ================= -->
+          <div id="motionArea" class="hidden mb-4 space-y-3">
+            <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 flex items-start gap-2">
               <i data-lucide="info" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i>
-              <span><strong>Motion Control:</strong> Nhân vật trong ảnh sẽ bắt chước y hệt cử chỉ, nhảy múa, diễn xuất từ một video mẫu (Thời lượng video mẫu từ 3s - 13s).</span>
+              <span>Nhân vật trong ảnh sẽ bắt chước cử chỉ, nhảy múa từ video mẫu (Thời lượng tự động theo video mẫu).</span>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <!-- Chọn ảnh nhân vật -->
-              <div class="p-3 rounded-xl bg-gray-900 border border-gray-800 text-center">
+              <!-- Ảnh nhân vật -->
+              <div class="p-3.5 rounded-xl bg-gray-900 border border-gray-800 text-center">
                 <label class="block text-xs font-semibold text-gray-300 mb-2">1. Ảnh Nhân Vật</label>
                 <input type="file" id="motionCharInput" accept="image/*" class="hidden" onchange="handleMotionCharSelect(event)">
-                <button type="button" onclick="document.getElementById('motionCharInput').click()" class="w-full py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-medium text-gray-200 border border-gray-700 flex items-center justify-center gap-1.5">
-                  <i data-lucide="user" class="w-3.5 h-3.5"></i> Chọn ảnh nhân vật
+                <button type="button" onclick="document.getElementById('motionCharInput').click()" class="w-full py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-medium text-gray-200 border border-gray-700 flex items-center justify-center gap-1.5">
+                  <i data-lucide="user" class="w-3.5 h-3.5"></i> Tải ảnh nhân vật
                 </button>
                 <p id="motionCharStatus" class="text-[11px] text-gray-500 mt-1.5 truncate">Chưa chọn ảnh</p>
               </div>
 
-              <!-- Chọn video mẫu -->
-              <div class="p-3 rounded-xl bg-gray-900 border border-gray-800 text-center">
+              <!-- Video mẫu -->
+              <div class="p-3.5 rounded-xl bg-gray-900 border border-gray-800 text-center">
                 <label class="block text-xs font-semibold text-gray-300 mb-2">2. Video Chuyển Động Mẫu</label>
                 <input type="file" id="motionVideoInput" accept="video/mp4,video/quicktime,video/webm" class="hidden" onchange="handleMotionVideoSelect(event)">
-                <button type="button" onclick="document.getElementById('motionVideoInput').click()" class="w-full py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-medium text-gray-200 border border-gray-700 flex items-center justify-center gap-1.5">
+                <button type="button" onclick="document.getElementById('motionVideoInput').click()" class="w-full py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-medium text-gray-200 border border-gray-700 flex items-center justify-center gap-1.5">
                   <i data-lucide="video" class="w-3.5 h-3.5 text-blue-400"></i> Tải video mẫu (MP4)
                 </button>
-                <p id="motionVideoStatus" class="text-[11px] text-gray-500 mt-1.5 truncate">Chưa chọn video (tối đa 100MB)</p>
+                <p id="motionVideoStatus" class="text-[11px] text-gray-500 mt-1.5 truncate">Chưa chọn video (3s - 13s)</p>
               </div>
+            </div>
+
+            <!-- Tùy chọn Motion Control duy nhất -->
+            <div class="p-3 rounded-xl bg-gray-900 border border-gray-800 flex items-center justify-between text-xs text-gray-300">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="volume-2" class="w-3.5 h-3.5 text-blue-400"></i> Giữ âm thanh gốc của video mẫu
+              </span>
+              <input type="checkbox" id="motionSoundToggle" checked class="w-4 h-4 rounded text-blue-600 bg-gray-800 border-gray-600 cursor-pointer">
             </div>
           </div>
 
-          <!-- Prompt Câu Lệnh -->
-          <div class="mb-4">
+          <!-- ================= Ô NHẬP PROMPT (CHỈ HIỆN KHI TEXT HOẶC IMAGE) ================= -->
+          <div id="promptSection" class="mb-4">
             <div class="flex items-center justify-between mb-1.5">
               <label for="promptInput" class="text-xs font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
                 <i data-lucide="message-square" class="w-3.5 h-3.5 text-blue-400"></i> Mô tả video (Prompt)
               </label>
               <span class="text-[11px] text-gray-500">Tiếng Việt hoặc Tiếng Anh</span>
             </div>
-            <textarea id="promptInput" rows="3" placeholder="Nhập mô tả video: Ví dụ chú mèo phi hành gia bay lơ lửng trong vũ trụ huyền ảo, chất lượng điện ảnh sắc nét..." class="w-full px-3.5 py-2.5 rounded-xl bg-gray-900 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition text-xs sm:text-sm leading-relaxed"></textarea>
+            <textarea id="promptInput" rows="3" placeholder="Nhập mô tả video: Ví dụ chú mèo phi hành gia bay lơ lửng trong vũ trụ huyền ảo, chất lượng điện ảnh sắc nét..." class="w-full px-3.5 py-2.5 rounded-xl bg-gray-900 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition text-xs leading-relaxed"></textarea>
             
-            <!-- Gợi ý nhanh -->
             <div class="mt-2 flex items-center gap-1.5 flex-wrap">
               <span class="text-[11px] text-gray-500 flex items-center gap-1">
                 <i data-lucide="lightbulb" class="w-3 h-3 text-amber-400"></i> Gợi ý:
               </span>
-              <button type="button" onclick="applyPrompt('Quảng cáo xe hơi sang trọng chạy trên đường ven biển hoàng hôn rực rỡ, góc quay máy bay drone 4K')" class="text-[11px] px-2 py-0.5 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition">
+              <button type="button" onclick="applyPrompt('Quảng cáo xe hơi sang trọng chạy trên đường ven biển hoàng hôn rực rỡ, góc quay drone 4K')" class="text-[11px] px-2 py-0.5 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition">
                 🏎️ Xe hơi hoàng hôn
               </button>
-              <button type="button" onclick="applyPrompt('Cận cảnh giọt nước bắn tung toé trên cánh hoa hồng nhung, chuyển động siêu chậm cinematic')" class="text-[11px] px-2 py-0.5 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition">
-                💧 Giọt nước slow-motion
+              <button type="button" onclick="applyPrompt('Cận cảnh giọt sương mai rơi trên cánh hoa hồng đỏ, chuyển động siêu chậm slow-motion')" class="text-[11px] px-2 py-0.5 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition">
+                🌹 Giọt sương mai
               </button>
               <button type="button" onclick="applyPrompt('Cô gái phong cách anime đi dạo phố Tokyo dưới mưa ánh đèn neon phản chiếu tuyệt đẹp')" class="text-[11px] px-2 py-0.5 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition">
                 🌧️ Anime phố Tokyo
@@ -209,19 +192,16 @@
             </div>
           </div>
 
-          <!-- BẢNG CẤU HÌNH THÔNG SỐ & MÔ HÌNH -->
-          <div class="space-y-3.5 pt-3 border-t border-gray-800/80">
+          <!-- ================= BẢNG CẤU HÌNH (TỰ ĐỘNG ẨN KHI Ở MOTION CONTROL) ================= -->
+          <div id="generalSettingsSection" class="space-y-3 pt-3 border-t border-gray-800">
             
             <!-- Mô hình AI & Thời lượng -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs font-semibold text-gray-400 mb-1">Mô hình AI (Model)</label>
                 <select id="modelSelect" onchange="onModelChange()" class="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-xs text-gray-200 focus:outline-none focus:border-blue-500">
                   <option value="4.0-flash" selected>⚡ Kling 4.0 Flash (Nhanh nhất - 150đ / 250đ)</option>
                   <option value="4.0">🎬 Kling 4.0 Pro (Điện ảnh sắc nét - 200đ)</option>
-                  <option value="2.6">💎 Kling 2.6 (Chi tiết cao - 150đ / 250đ)</option>
-                  <option value="2.1">🏃 Kling 2.1 (Tốc độ cao - 150đ / 250đ)</option>
-                  <option value="3.0">⚖️ Kling 3.0 (Cân bằng - 250đ)</option>
                 </select>
                 <p id="modelDescText" class="text-[11px] text-blue-400 mt-1">Render nhanh nhất, có âm thanh tự sinh kèm theo.</p>
               </div>
@@ -240,7 +220,7 @@
             </div>
 
             <!-- Tỉ lệ khung hình & Âm thanh -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs font-semibold text-gray-400 mb-1">Tỉ lệ khung hình</label>
                 <div class="grid grid-cols-3 gap-1.5">
@@ -260,19 +240,19 @@
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-gray-400 mb-1">Âm thanh AI tự sinh</label>
+                <label class="block text-xs font-semibold text-gray-400 mb-1">Âm thanh AI</label>
                 <div class="flex items-center justify-between p-2 rounded-xl bg-gray-900 border border-gray-700">
                   <span class="text-xs text-gray-300 flex items-center gap-1.5">
-                    <i data-lucide="volume-2" class="w-3.5 h-3.5 text-blue-400"></i> Bật âm thanh
+                    <i data-lucide="volume-2" class="w-3.5 h-3.5 text-blue-400"></i> Bật âm thanh tự sinh
                   </span>
-                  <input type="checkbox" id="audioToggle" checked class="w-4 h-4 rounded text-blue-600 bg-gray-800 border-gray-600 focus:ring-blue-500 cursor-pointer">
+                  <input type="checkbox" id="audioToggle" checked class="w-4 h-4 rounded text-blue-600 bg-gray-800 border-gray-600 cursor-pointer">
                 </div>
               </div>
             </div>
 
           </div>
 
-          <!-- Nút kích hoạt Tạo Video & Giá tiền -->
+          <!-- Nút Tạo Video & Giá tiền -->
           <div class="mt-5 pt-3.5 border-t border-gray-800 flex items-center justify-between gap-4">
             <div>
               <span class="text-[11px] text-gray-400 block">Chi phí lượt này:</span>
@@ -290,7 +270,7 @@
       </div>
 
       <!-- CỘT PHẢI: MÀN HÌNH XEM KẾT QUẢ (5 Cột) -->
-      <div class="lg:col-span-5 space-y-5">
+      <div class="lg:col-span-5 space-y-4">
         
         <div class="glass-card rounded-2xl p-5 shadow-xl h-full flex flex-col justify-between">
           
@@ -304,10 +284,8 @@
               </span>
             </div>
 
-            <!-- Khung Player -->
             <div id="videoContainer" class="w-full aspect-[16/9] bg-black/60 rounded-xl border border-gray-800 flex items-center justify-center overflow-hidden relative shadow-inner">
               
-              <!-- Chờ rỗng -->
               <div id="stateEmpty" class="text-center p-4 space-y-1.5">
                 <div class="w-12 h-12 rounded-full bg-gray-800/80 text-gray-600 mx-auto flex items-center justify-center">
                   <i data-lucide="film" class="w-6 h-6"></i>
@@ -316,7 +294,6 @@
                 <p class="text-[11px] text-gray-500">Chọn cấu hình và bấm "Bắt Đầu Tạo Video"</p>
               </div>
 
-              <!-- Đang render -->
               <div id="stateLoading" class="hidden text-center p-4 space-y-3 w-full">
                 <div class="relative w-14 h-14 mx-auto">
                   <div class="absolute inset-0 rounded-full border-4 border-blue-500/20 animate-ping"></div>
@@ -333,13 +310,11 @@
                 <p class="text-[10px] text-gray-500">Thời gian tạo trung bình từ 1 - 3 phút, vui lòng đợi...</p>
               </div>
 
-              <!-- Video hoàn thành -->
               <video id="resultVideo" controls playsinline class="hidden w-full h-full object-contain rounded-xl" src=""></video>
 
             </div>
           </div>
 
-          <!-- Nút hành động -->
           <div id="videoActions" class="hidden mt-4 space-y-2 pt-3 border-t border-gray-800">
             <a id="btnDownload" href="#" download="kling-video.mp4" target="_blank" class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition">
               <i data-lucide="download" class="w-3.5 h-3.5"></i> Tải Video MP4 Về Máy
@@ -375,7 +350,6 @@
     <p>© 2026 xenoecom.cloud · Tích hợp sức mạnh Kling AI Video Studio</p>
   </footer>
 
-  <!-- SCRIPT LOGIC JAVASCRIPT -->
   <script>
     lucide.createIcons();
 
@@ -388,7 +362,6 @@
     let motionVideoKey = null;
     let activePollingInterval = null;
 
-    // 1. Tải số dư ví
     async function fetchWallet() {
       const balanceEl = document.getElementById('walletBalance');
       balanceEl.textContent = 'Đang tải...';
@@ -406,41 +379,44 @@
       }
     }
 
-    // 2. Chuyển đổi Mode (Text / Image / Motion)
+    // Chuyển đổi tab chế độ (Ẩn triệt để các phần thừa)
     function switchMode(mode) {
       currentMode = mode;
       const tabText = document.getElementById('tabText');
       const tabImage = document.getElementById('tabImage');
       const tabMotion = document.getElementById('tabMotion');
-      const uploadArea = document.getElementById('imageUploadArea');
-      const motionArea = document.getElementById('motionUploadArea');
-      const modelSelect = document.getElementById('modelSelect');
+      const imageArea = document.getElementById('imageUploadArea');
+      const motionArea = document.getElementById('motionArea');
+      const promptSec = document.getElementById('promptSection');
+      const generalSettings = document.getElementById('generalSettingsSection');
 
-      // Reset tabs
       [tabText, tabImage, tabMotion].forEach(t => {
         t.className = 'flex-1 py-2 rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 transition text-gray-400 hover:text-white';
       });
 
-      uploadArea.classList.add('hidden');
-      motionArea.classList.add('hidden');
-      modelSelect.disabled = false;
-
       if (mode === 'text') {
         tabText.className = 'flex-1 py-2 rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 transition bg-blue-600 text-white shadow';
+        imageArea.classList.add('hidden');
+        motionArea.classList.add('hidden');
+        promptSec.classList.remove('hidden');
+        generalSettings.classList.remove('hidden');
       } else if (mode === 'image') {
         tabImage.className = 'flex-1 py-2 rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 transition bg-blue-600 text-white shadow';
-        uploadArea.classList.remove('hidden');
+        imageArea.classList.remove('hidden');
+        motionArea.classList.add('hidden');
+        promptSec.classList.remove('hidden');
+        generalSettings.classList.remove('hidden');
       } else if (mode === 'motion') {
         tabMotion.className = 'flex-1 py-2 rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 transition bg-amber-600 text-white shadow';
+        imageArea.classList.add('hidden');
         motionArea.classList.remove('hidden');
-        // Motion Control bắt buộc dùng Kling 2.6
-        modelSelect.value = '2.6';
-        modelSelect.disabled = true;
+        // Ẩn triệt để prompt và cấu hình model/thời lượng/tỉ lệ khi ở Motion Control
+        promptSec.classList.add('hidden');
+        generalSettings.classList.add('hidden');
       }
       onModelChange();
     }
 
-    // 3. Xử lý khi đổi Model
     function onModelChange() {
       const model = document.getElementById('modelSelect').value;
       const descEl = document.getElementById('modelDescText');
@@ -448,42 +424,25 @@
       const btn10 = document.getElementById('btnDur10');
 
       if (currentMode === 'motion') {
-        descEl.textContent = 'Chế độ Motion Control: Cố định model Kling 2.6 theo video mẫu.';
         calculatePrice();
         return;
       }
 
-      // Kiểm tra quy định thời lượng
       if (model === '4.0') {
-        // Kling 4.0 chỉ hỗ trợ 5s (200đ)
         setDuration(5);
         btn10.disabled = true;
         btn10.classList.add('opacity-40', 'cursor-not-allowed');
-        descEl.textContent = 'Mô hình Pro sắc nét nhất, hiệu ứng điện ảnh cao cấp (Cố định 5s).';
-      } else if (model === '3.0') {
-        // Kling 3.0 chỉ hỗ trợ 10s (250đ)
-        setDuration(10);
-        btn5.disabled = true;
-        btn5.classList.add('opacity-40', 'cursor-not-allowed');
-        descEl.textContent = 'Mô hình 3.0 cân bằng chất lượng & độ dài (Cố định 10s).';
+        descEl.textContent = '🎬 Mô hình Pro sắc nét nhất, hiệu ứng điện ảnh cao cấp (5s).';
       } else {
         btn5.disabled = false;
         btn10.disabled = false;
         btn5.classList.remove('opacity-40', 'cursor-not-allowed');
         btn10.classList.remove('opacity-40', 'cursor-not-allowed');
-
-        if (model === '4.0-flash') {
-          descEl.textContent = '⚡ Nhanh nhất hiện tại, chuyển động mượt mà, có âm thanh tự sinh.';
-        } else if (model === '2.6') {
-          descEl.textContent = '💎 Rẻ & chi tiết cao, thích hợp video phong cảnh, đồ vật.';
-        } else if (model === '2.1') {
-          descEl.textContent = '🏃 Tốc độ render nhanh, có hỗ trợ âm thanh.';
-        }
+        descEl.textContent = '⚡ Render nhanh nhất, có âm thanh tự sinh kèm theo.';
       }
       calculatePrice();
     }
 
-    // 4. Chọn thời lượng
     function setDuration(dur) {
       currentDuration = dur;
       const b5 = document.getElementById('btnDur5');
@@ -498,7 +457,6 @@
       calculatePrice();
     }
 
-    // 5. Chọn tỉ lệ khung hình
     function setRatio(ratio) {
       currentAspectRatio = ratio;
       ['16:9', '9:16', '1:1'].forEach(r => {
@@ -512,21 +470,16 @@
       });
     }
 
-    // 6. Tính toán giá tiền chính xác 100% theo bảng giá API
     function calculatePrice() {
       const priceEl = document.getElementById('priceEstimate');
       let price = 150;
-
       if (currentMode === 'motion') {
-        price = 300; // Motion Control luôn là 300đ
+        price = 300;
       } else {
         const model = document.getElementById('modelSelect').value;
         if (model === '4.0') {
-          price = 200; // Kling 4.0 Pro = 200đ
-        } else if (model === '3.0') {
-          price = 250; // Kling 3.0 = 250đ
+          price = 200;
         } else {
-          // 4.0-flash, 2.6, 2.1
           price = currentDuration === 5 ? 150 : 250;
         }
       }
@@ -537,7 +490,7 @@
       document.getElementById('promptInput').value = text;
     }
 
-    // 7. Xử lý tải ảnh (Image-to-Video)
+    // Tải ảnh Image-to-Video
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     dropZone.onclick = () => fileInput.click();
@@ -573,7 +526,7 @@
           statusText.innerHTML = '<i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-400"></i> Đã tải ảnh thành công!';
           lucide.createIcons();
         } else {
-          statusText.innerHTML = '<span class="text-red-400">Lỗi upload ảnh</span>';
+          statusText.innerHTML = '<span class="text-red-400">Lỗi upload</span>';
         }
       } catch (err) {
         statusText.innerHTML = '<span class="text-red-400">Lỗi kết nối</span>';
@@ -588,22 +541,11 @@
       document.getElementById('imagePreviewContainer').classList.add('hidden');
     }
 
-    // Xử lý End Frame (Ảnh kết thúc)
-    function toggleEndFrame(checkbox) {
-      const area = document.getElementById('endFrameUploadArea');
-      if (checkbox.checked) {
-        area.classList.remove('hidden');
-      } else {
-        area.classList.add('hidden');
-        uploadedEndFrameKey = null;
-      }
-    }
-
     async function handleEndFileSelect(e) {
       if (!e.target.files?.[0]) return;
       const file = e.target.files[0];
       const status = document.getElementById('endFrameStatusText');
-      status.textContent = 'Đang tải ảnh cuối lên...';
+      status.textContent = 'Đang tải...';
 
       const formData = new FormData();
       formData.append('files', file);
@@ -612,22 +554,19 @@
         const resData = await res.json();
         if (resData.success && resData.data?.objects?.[0]?.objectKey) {
           uploadedEndFrameKey = resData.data.objects[0].objectKey;
-          status.innerHTML = '<span class="text-emerald-400">✓ Đã tải ảnh cuối (' + file.name + ')</span>';
-        } else {
-          status.innerHTML = '<span class="text-red-400">Lỗi tải ảnh cuối</span>';
+          status.textContent = '✓ ' + file.name;
         }
       } catch (err) {
-        status.innerHTML = '<span class="text-red-400">Lỗi kết nối</span>';
+        status.textContent = 'Lỗi';
       }
     }
 
-    // Xử lý Motion Control
+    // Tải Motion Control
     async function handleMotionCharSelect(e) {
       if (!e.target.files?.[0]) return;
       const file = e.target.files[0];
       const status = document.getElementById('motionCharStatus');
-      status.textContent = 'Đang tải ảnh...';
-
+      status.textContent = 'Đang tải...';
       const formData = new FormData();
       formData.append('files', file);
       try {
@@ -646,8 +585,7 @@
       if (!e.target.files?.[0]) return;
       const file = e.target.files[0];
       const status = document.getElementById('motionVideoStatus');
-      status.textContent = 'Đang tải video (chờ chút)...';
-
+      status.textContent = 'Đang tải video (vui lòng chờ)...';
       const formData = new FormData();
       formData.append('files', file);
       try {
@@ -658,31 +596,34 @@
           status.innerHTML = '<span class="text-emerald-400 font-medium">✓ ' + file.name + '</span>';
         }
       } catch (err) {
-        status.textContent = 'Lỗi tải video mẫu';
+        status.textContent = 'Lỗi tải video';
       }
     }
 
-    // 8. BẮT ĐẦU TẠO VIDEO
+    // Bắt đầu tạo video
     async function startGeneration() {
-      const prompt = document.getElementById('promptInput').value.trim();
-      if (!prompt) {
-        alert('Vui lòng nhập mô tả video (Prompt)!');
-        return;
-      }
+      let prompt = document.getElementById('promptInput').value.trim();
 
-      if (currentMode === 'image' && !uploadedImageKey) {
-        alert('Vui lòng chọn ảnh đầu vào trước!');
-        return;
-      }
-
-      if (currentMode === 'motion') {
-        if (!motionCharKey || !motionVideoKey) {
-          alert('Vui lòng tải đủ cả Ảnh Nhân Vật và Video Mẫu cho chế độ Motion Control!');
+      if (currentMode === 'text') {
+        if (!prompt) {
+          alert('Vui lòng nhập mô tả video (Prompt)!');
           return;
         }
+      } else if (currentMode === 'image') {
+        if (!uploadedImageKey) {
+          alert('Vui lòng chọn ảnh trước khi tạo video!');
+          return;
+        }
+        if (!prompt) prompt = "Nhân vật và cảnh vật chuyển động mượt mà, sống động";
+      } else if (currentMode === 'motion') {
+        if (!motionCharKey || !motionVideoKey) {
+          alert('Vui lòng chọn đủ cả Ảnh Nhân Vật và Video Mẫu!');
+          return;
+        }
+        prompt = "Nhân vật chuyển động theo video mẫu";
       }
 
-      const model = document.getElementById('modelSelect').value;
+      const model = currentMode === 'motion' ? '2.6' : document.getElementById('modelSelect').value;
       const audio = document.getElementById('audioToggle').checked;
 
       setUIGenerating(true);
@@ -702,7 +643,7 @@
       } else if (currentMode === 'motion') {
         payload.imageKeys = [motionCharKey];
         payload.motionVideoObjectKey = motionVideoKey;
-        payload.keepOriginalSound = true;
+        payload.keepOriginalSound = document.getElementById('motionSoundToggle').checked;
       }
 
       try {
@@ -714,7 +655,7 @@
         const data = await res.json();
 
         if (data.success && data.jobId) {
-          document.getElementById('loadingStepTitle').textContent = 'Đã gửi yêu cầu tạo video!';
+          document.getElementById('loadingStepTitle').textContent = 'Đã gửi yêu cầu thành công!';
           document.getElementById('loadingStepDesc').textContent = 'Mã Job: ' + data.jobId;
           pollJobStatus(data.jobId, prompt);
           fetchWallet();
@@ -735,7 +676,6 @@
       }
     }
 
-    // 9. Theo dõi tiến độ Video (Polling)
     function pollJobStatus(jobId, promptText) {
       if (activePollingInterval) clearInterval(activePollingInterval);
 
@@ -774,7 +714,7 @@
               fetchWallet();
             } else if (status === 'failed' || status === 'canceled') {
               clearInterval(activePollingInterval);
-              alert('Video tạo không thành công (' + (data.job.errorCode || 'Lỗi xử lý') + '). Tiền đã được hoàn lại ví nếu có lỗi.');
+              alert('Video không thành công (' + (data.job.errorCode || 'Lỗi xử lý') + '). Số dư ví đã được hoàn lại.');
               setUIGenerating(false);
             }
           }
@@ -784,7 +724,6 @@
       }, 4000);
     }
 
-    // 10. Hiển thị kết quả
     function showVideoResult(videoUrl, prompt) {
       document.getElementById('stateEmpty').classList.add('hidden');
       document.getElementById('stateLoading').classList.add('hidden');
