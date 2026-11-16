@@ -170,6 +170,18 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                 if req_data.get("imageKeys"):
                     batch_payload["imageKeys"] = req_data.get("imageKeys")
 
+                # Nếu có ảnh cuối (End Frame / Tail Image)
+                if req_data.get("endFrameKey"):
+                    batch_payload["endFrameKey"] = req_data.get("endFrameKey")
+
+                # Nếu là Motion Control (Bắt chước video)
+                if req_data.get("motionVideoObjectKey"):
+                    batch_payload["jobType"] = "motion_control"
+                    batch_payload["motionVideoObjectKey"] = req_data.get("motionVideoObjectKey")
+                    batch_payload["keepOriginalSound"] = req_data.get("keepOriginalSound", True)
+                    batch_payload["settings"]["model"] = "2.6"
+                    batch_payload["settings"]["durationSeconds"] = 0
+
                 idempotency_key = str(uuid.uuid4())
 
                 req = urllib.request.Request(
