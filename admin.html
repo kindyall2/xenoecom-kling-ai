@@ -291,6 +291,11 @@
       try {
         // Thống kê
         const statRes = await fetch('/api/admin/stats', { headers: { 'X-Admin-Token': token } });
+        if (statRes.status === 401) {
+          localStorage.removeItem('xenoecom_admin_token');
+          checkAdminAuth();
+          return;
+        }
         const statData = await statRes.json();
         if (statData.success) {
           document.getElementById('statTotalUsers').textContent = statData.totalUsers;
@@ -301,10 +306,17 @@
 
         // Danh sách khách
         const userRes = await fetch('/api/admin/users', { headers: { 'X-Admin-Token': token } });
+        if (userRes.status === 401) {
+          localStorage.removeItem('xenoecom_admin_token');
+          checkAdminAuth();
+          return;
+        }
         const userData = await userRes.json();
         if (userData.success) {
           allUsers = userData.users;
           renderUserTable(allUsers);
+        } else {
+          document.getElementById('userTableBody').innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-500">Chưa có khách hàng nào</td></tr>';
         }
 
         // Lịch sử video
@@ -415,7 +427,7 @@
           <p class="text-xs text-gray-300 font-medium line-clamp-2" title="${v.prompt}">${v.prompt}</p>
           <div class="text-[10px] text-gray-500 pt-1 border-t border-gray-800 flex justify-between">
             <span>${v.time}</span>
-            <a href="${v.videoUrl}" target="_blank" download class="text-blue-400 hover:underline">Tải về</a>
+            <a href="/api/download-video?url=${encodeURIComponent(v.videoUrl)}" class="text-blue-400 hover:underline font-medium">Tải MP4</a>
           </div>
         </div>
       `).join('');
