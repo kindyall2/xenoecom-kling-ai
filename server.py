@@ -237,6 +237,34 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_json(500, {"success": False, "error": str(e)})
             return
 
+        # API: Tải video MP4 trực tiếp về máy (Đảm bảo điện thoại iPhone/Android tải file MP4 thật, không ra file web)
+        if path == "/api/download-video":
+            from urllib.parse import urlparse, parse_qs
+            query = parse_qs(urlparse(self.path).query)
+            target_url = query.get("url", [None])[0]
+            if not target_url:
+                self.send_json(400, {"error": "Thiếu link video để tải!"})
+                return
+            try:
+                req = urllib.request.Request(target_url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=60) as res:
+                    self.send_response(200)
+                    self.send_header("Content-Type", "video/mp4")
+                    self.send_header("Content-Disposition", 'attachment; filename="kling_video.mp4"')
+                    cl = res.headers.get("Content-Length")
+                    if cl:
+                        self.send_header("Content-Length", cl)
+                    self.send_header("Access-Control-Allow-Origin", "*")
+                    self.end_headers()
+                    while True:
+                        chunk = res.read(65536)
+                        if not chunk:
+                            break
+                        self.wfile.write(chunk)
+            except Exception as e:
+                self.send_json(500, {"error": str(e)})
+            return
+
         super().do_GET()
 
     def do_POST(self):
@@ -411,12 +439,34 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                     batch_payload["imageKeys"] = req_data.get("imageKeys")
                 if req_data.get("endFrameKey"):
                     batch_payload["endFrameKey"] = req_data.get("endFrameKey")
+
+                # TỰ ĐỘNG HIỆU CHỈNH THÔNG SỐ ĐẢM BẢO KHÔNG BỊ LỖI API:
                 if is_motion:
                     batch_payload["jobType"] = "motion_control"
                     batch_payload["motionVideoObjectKey"] = req_data.get("motionVideoObjectKey")
                     batch_payload["keepOriginalSound"] = req_data.get("keepOriginalSound", True)
                     batch_payload["settings"]["model"] = "2.6"
                     batch_payload["settings"]["durationSeconds"] = 0
+                else:
+                    # Model 4.0 Pro cố định 5s
+                    if model == "4.0":
+                        batch_payload["settings"]["durationSeconds"] = 5
+                    # Model 3.0 cố định 10s
+                    elif model == "3.0":
+                        batch_payload["settings"]["durationSeconds"] = 10
+
+                    # Model 2.6 và 3.0 KHÔNG hỗ trợ audio=True (Kling API từ chối nếu gửi audio=true)
+                    if model in ["2.6", "3.0"]:
+                        batch_payload["settings"]["audio"] = False
+
+                    # Model 2.1 chỉ hỗ trợ Ảnh sang Video
+                    if model == "2.1" and not req_data.get("imageKeys"):
+                        db.adjust_user_balance(user["id"], cost)
+                        self.send_json(400, {
+                            "success": False,
+                            "error": "Mô hình Kling 2.1 chỉ hỗ trợ chế độ 'Ảnh Sang Video'. Vui lòng chọn tab Ảnh Sang Video hoặc chuyển sang Kling 4.0 Flash."
+                        })
+                        return
 
                 idempotency_key = str(uuid.uuid4())
 
@@ -472,11 +522,17 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                         "User-Agent": "Mozilla/5.0"
                     }
                 )
-                with urllib.request.urlopen(req, timeout=30) as res:
+                with urllib.request.urlopen(req, timeout=180) as res:
                     upload_res = json.loads(res.read().decode("utf-8"))
                     self.send_json(200, {"success": True, "data": upload_res})
             except urllib.error.HTTPError as e:
-                self.send_json(e.code, {"success": False, "error": e.read().decode("utf-8")})
+                err_text = e.read().decode("utf-8")
+                try:
+                    err_json = json.loads(err_text)
+                    err_msg = err_json.get("error", {}).get("message") or err_text
+                except Exception:
+                    err_msg = err_text
+                self.send_json(e.code, {"success": False, "error": err_msg})
             except Exception as e:
                 self.send_json(500, {"success": False, "error": str(e)})
             return
@@ -492,7 +548,7 @@ def run():
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
-            print("Da dung server.")
+            print("\nDa dung server.")
 
 if __name__ == "__main__":
     run()
