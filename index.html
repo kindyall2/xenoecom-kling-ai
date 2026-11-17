@@ -913,9 +913,7 @@
 
       // 1. Kiểm tra dung lượng (tối đa 100MB theo Kling AI)
       if (file.size > 100 * 1024 * 1024) {
-        alert('⚠️ Dung lượng video vượt quá 100MB (' + (file.size / (1024*1024)).toFixed(1) + 'MB)!
-
-Kling AI chỉ cho phép video mẫu tối đa 100MB. Vui lòng chọn video nhẹ hơn.');
+        alert(`⚠️ Dung lượng video vượt quá 100MB (${(file.size / (1024*1024)).toFixed(1)}MB)! Kling AI chỉ cho phép video mẫu tối đa 100MB. Vui lòng chọn video nhẹ hơn.`);
         e.target.value = '';
         motionVideoKey = null;
         return;
@@ -930,18 +928,14 @@ Kling AI chỉ cho phép video mẫu tối đa 100MB. Vui lòng chọn video nh�
       const proceedUpload = async (duration) => {
         // Kiểm tra thời lượng quá 13 giây
         if (duration > 13.0) {
-          alert('⚠️ Video mẫu vượt quá 13 giây (hiện tại: ' + duration.toFixed(1) + 's)!
-
-Kling AI quy định video mẫu Motion Control chỉ được dài từ 3 đến tối đa 13 giây.
-
-Vui lòng chọn video khác hoặc dùng điện thoại cắt video ngắn lại dưới 13 giây nhé!');
+          alert(`⚠️ Video mẫu vượt quá 13 giây (hiện tại: ${duration.toFixed(1)}s)! Kling AI quy định video mẫu Motion Control chỉ được dài từ 3 đến tối đa 13 giây. Vui lòng chọn video khác hoặc dùng điện thoại cắt video ngắn lại dưới 13 giây nhé!`);
           status.innerHTML = '<span class="text-amber-400 font-semibold">⚠️ Video quá 13s (' + duration.toFixed(1) + 's). Hãy chọn video dưới 13 giây.</span>';
           e.target.value = '';
           motionVideoKey = null;
           return;
         }
         if (duration < 2.5) {
-          alert('⚠️ Video mẫu quá ngắn (' + duration.toFixed(1) + 's)! Kling AI yêu cầu video mẫu tối thiểu từ 3 giây trở lên.');
+          alert(`⚠️ Video mẫu quá ngắn (${duration.toFixed(1)}s)! Kling AI yêu cầu video mẫu tối thiểu từ 3 giây trở lên.`);
           status.innerHTML = '<span class="text-amber-400 font-semibold">⚠️ Video quá ngắn (<3s). Vui lòng chọn lại.</span>';
           e.target.value = '';
           motionVideoKey = null;
