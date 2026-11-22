@@ -235,6 +235,21 @@ def update_video_url(job_id, video_url):
     conn.close()
     return True
 
+def update_video_failed(job_id):
+    if is_supabase_enabled():
+        try:
+            s_req(f"user_videos?job_id=eq.{job_id}", method="PATCH", data={"status": "failed"})
+            return True
+        except Exception as e:
+            print("[DB] Supabase update_video_failed error:", e)
+
+    conn = get_sqlite()
+    c = conn.cursor()
+    c.execute("UPDATE user_videos SET status = 'failed' WHERE job_id = ?", (job_id,))
+    conn.commit()
+    conn.close()
+    return True
+
 def get_user_videos(user_id, limit=20):
     if is_supabase_enabled():
         try:
