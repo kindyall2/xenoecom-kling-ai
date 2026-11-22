@@ -152,13 +152,49 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_json(200, {"success": True, "user": user})
             return
 
-        # API: Lấy lịch sử video của khách
+        # API: Lấy lịch sử video của khách (Tự động đồng bộ trạng thái các video đang render từ Klinggiare)
         if path == "/api/user/videos":
             user = self.get_authenticated_user()
             if not user:
                 self.send_json(401, {"success": False, "error": "Chưa đăng nhập"})
                 return
-            videos = db.get_user_videos(user["id"])
+            videos = db.get_user_videos(user["id"], limit=30)
+            # Kiểm tra và cập nhật tối đa 5 video đang ở trạng thái processing gần nhất
+            checked = 0
+            for v in videos:
+                if v.get("status") == "processing" and v.get("jobId") and checked < 5:
+                    checked += 1
+                    jid = v["jobId"]
+                    try:
+                        jreq = urllib.request.Request(
+                            f"{API_BASE}/api/v1/ext/jobs/{jid}",
+                            headers={"Authorization": f"Bearer {API_KEY}", "User-Agent": "Mozilla/5.0"}
+                        )
+                        with urllib.request.urlopen(jreq, timeout=6) as jres:
+                            jdata = json.loads(jres.read().decode("utf-8"))
+                        jst = jdata.get("status")
+                        if jst == "success":
+                            vurl = None
+                            try:
+                                vreq = urllib.request.Request(
+                                    f"{API_BASE}/api/v1/ext/jobs/{jid}/video-url",
+                                    headers={"Authorization": f"Bearer {API_KEY}", "User-Agent": "Mozilla/5.0"}
+                                )
+                                with urllib.request.urlopen(vreq, timeout=6) as vres:
+                                    vurl = json.loads(vres.read().decode("utf-8")).get("url")
+                            except Exception:
+                                vurl = jdata.get("providerVideoUrl") or jdata.get("providerCdnUrl")
+                            if vurl:
+                                db.update_video_url(jid, vurl)
+                                v["videoUrl"] = vurl
+                                v["status"] = "success"
+                        elif jst in ("failed", "canceled"):
+                            db.update_video_failed(jid)
+                            v["status"] = "failed"
+                            if v.get("cost"):
+                                db.adjust_user_balance(user["id"], int(v["cost"]))
+                    except Exception:
+                        pass
             self.send_json(200, {"success": True, "videos": videos})
             return
 
