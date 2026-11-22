@@ -508,23 +508,111 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_json(500, {"success": False, "error": str(e)})
             return
 
-        # API: Tải ảnh/video lên Klinggiare
+        # API: Tải ảnh/video lên Klinggiare (Dùng cơ chế 3 bước Presigned R2 chuẩn như trang chủ Klinggiare)
         if path == "/api/upload-image":
-            content_type = self.headers.get("Content-Type")
+            content_type = self.headers.get("Content-Type", "")
             body = self.rfile.read(content_length)
             try:
-                req = urllib.request.Request(
-                    f"{API_BASE}/api/v1/ext/uploads",
-                    data=body,
-                    headers={
-                        "Authorization": f"Bearer {API_KEY}",
-                        "Content-Type": content_type,
-                        "User-Agent": "Mozilla/5.0"
+                import re
+                m = re.search(r"boundary=([^;\s]+)", content_type)
+                if not m:
+                    raise ValueError("Missing multipart boundary")
+                boundary = m.group(1).strip('"').encode("utf-8")
+                parts = body.split(b"--" + boundary)
+                upload_res = None
+
+                for part in parts:
+                    if b"Content-Disposition" not in part:
+                        continue
+                    part = part.lstrip(b"\r\n")
+                    if b"\r\n\r\n" not in part:
+                        continue
+                    header_bytes, file_bytes = part.split(b"\r\n\r\n", 1)
+                    if file_bytes.endswith(b"\r\n"):
+                        file_bytes = file_bytes[:-2]
+                    header_str = header_bytes.decode("utf-8", errors="ignore")
+                    fn_match = re.search(r'filename="([^"]+)"', header_str)
+                    filename = fn_match.group(1) if fn_match else "upload.mp4"
+                    ct_match = re.search(r"Content-Type:\s*([^\r\n]+)", header_str, re.IGNORECASE)
+                    part_ct = ct_match.group(1).strip().lower() if ct_match else ""
+
+                    ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
+                    if file_bytes.startswith(b"\xff\xd8\xff"):
+                        mime = "image/jpeg"
+                    elif file_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+                        mime = "image/png"
+                    elif file_bytes[:4] == b"RIFF" and file_bytes[8:12] == b"WEBP":
+                        mime = "image/webp"
+                    elif file_bytes.startswith((b"GIF87a", b"GIF89a")):
+                        mime = "image/gif"
+                    elif file_bytes.startswith(b"\x1a\x45\xdf\xa3"):
+                        mime = "video/webm"
+                    elif len(file_bytes) >= 12 and file_bytes[4:8] in (b"ftyp", b"moov", b"wide", b"mdat"):
+                        if ext == "mov" or file_bytes[8:12] == b"qt  ":
+                            mime = "video/quicktime"
+                        else:
+                            mime = "video/mp4"
+                    elif ext in ("jpg", "jpeg"):
+                        mime = "image/jpeg"
+                    elif ext == "png":
+                        mime = "image/png"
+                    elif ext == "webp":
+                        mime = "image/webp"
+                    elif ext == "gif":
+                        mime = "image/gif"
+                    elif ext == "mov":
+                        mime = "video/quicktime"
+                    elif ext == "webm":
+                        mime = "video/webm"
+                    elif ext in ("mp4", "m4v", "3gp", "mov"):
+                        mime = "video/mp4"
+                    elif part_ct in ("image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4", "video/quicktime", "video/webm"):
+                        mime = part_ct
+                    else:
+                        mime = "video/mp4" if "video" in part_ct else "image/jpeg"
+
+                    # Bước 1: Lấy Presigned Upload URL từ Klinggiare
+                    init_payload = {
+                        "files": [{
+                            "filename": filename,
+                            "contentType": mime,
+                            "sizeBytes": len(file_bytes)
+                        }]
                     }
-                )
-                with urllib.request.urlopen(req, timeout=180) as res:
-                    upload_res = json.loads(res.read().decode("utf-8"))
-                    self.send_json(200, {"success": True, "data": upload_res})
+                    req1 = urllib.request.Request(
+                        f"{API_BASE}/api/v1/ext/batches/uploads/init",
+                        data=json.dumps(init_payload).encode("utf-8"),
+                        headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
+                    )
+                    with urllib.request.urlopen(req1, timeout=30) as res1:
+                        init_data = json.loads(res1.read().decode("utf-8"))
+                        item = init_data["items"][0]
+
+                    # Bước 2: PUT trực tiếp dữ liệu file lên kho lưu trữ Cloudflare R2
+                    req2 = urllib.request.Request(
+                        item["uploadUrl"],
+                        data=file_bytes,
+                        headers={"Content-Type": item["contentType"], "User-Agent": "Mozilla/5.0"},
+                        method="PUT"
+                    )
+                    with urllib.request.urlopen(req2, timeout=180) as res2:
+                        _ = res2.read()
+
+                    # Bước 3: Xác nhận hoàn tất upload (uploads/complete)
+                    comp_payload = {"items": [{"objectKey": item["objectKey"]}]}
+                    req3 = urllib.request.Request(
+                        f"{API_BASE}/api/v1/ext/batches/uploads/complete",
+                        data=json.dumps(comp_payload).encode("utf-8"),
+                        headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
+                    )
+                    with urllib.request.urlopen(req3, timeout=30) as res3:
+                        upload_res = json.loads(res3.read().decode("utf-8"))
+                    break
+
+                if not upload_res:
+                    raise ValueError("Không tìm thấy dữ liệu tệp tải lên")
+
+                self.send_json(200, {"success": True, "data": upload_res})
             except urllib.error.HTTPError as e:
                 err_text = e.read().decode("utf-8")
                 try:
