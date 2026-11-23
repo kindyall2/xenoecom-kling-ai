@@ -489,6 +489,27 @@
     </div>
   </div>
 
+  <!-- ================= MODAL HỎI TẠO TIẾP VIDEO TIẾP THEO ================= -->
+  <div id="createMoreModal" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-emerald-500/30 relative text-center">
+      <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 mx-auto flex items-center justify-center mb-3">
+        <i data-lucide="sparkles" class="w-6 h-6"></i>
+      </div>
+      <h3 class="text-base font-bold text-white mb-2">Đã gửi lệnh tạo video!</h3>
+      <p class="text-xs text-gray-300 leading-relaxed mb-5">
+        Bạn có thể <b>tạo video tiếp theo</b> mà không cần đợi video vừa tạo xong. Tất cả video sẽ tự động hiển thị ở mục <b>Video Đã Tạo Của Bạn</b> bên dưới.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-2.5">
+        <button type="button" onclick="closeCreateMoreModal()" class="flex-1 py-2.5 px-4 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold transition">
+          Huỷ
+        </button>
+        <button type="button" onclick="proceedCreateNextVideo()" class="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition">
+          Tạo tiếp video tiếp theo
+        </button>
+      </div>
+    </div>
+  </div>
+
   <footer class="mt-12 py-5 border-t border-gray-900 text-center text-xs text-gray-500 relative z-10">
     <p>© 2026 xenoecom.cloud · Nền tảng tạo video AI chuyên nghiệp</p>
   </footer>
@@ -646,6 +667,29 @@
       }
       localStorage.removeItem('xenoecom_auth_token');
       setGuestState();
+    }
+
+    // Modal hỏi tạo tiếp video tiếp theo
+    function openCreateMoreModal() {
+      const m = document.getElementById('createMoreModal');
+      if (m) {
+        m.classList.remove('hidden');
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+
+    function closeCreateMoreModal() {
+      const m = document.getElementById('createMoreModal');
+      if (m) m.classList.add('hidden');
+    }
+
+    function proceedCreateNextVideo() {
+      closeCreateMoreModal();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const promptInput = document.getElementById('promptInput');
+      if (promptInput && currentMode !== 'motion') {
+        promptInput.focus();
+      }
     }
 
     // Modal nạp tiền
@@ -1085,6 +1129,7 @@
           if (genBtn) genBtn.disabled = false;
           if (genBtnText) genBtnText.textContent = '➕ Tạo Thêm Video Khác Ngay';
           if (hintBox) hintBox.classList.remove('hidden');
+          openCreateMoreModal();
         } else {
           if (data.error === 'INSUFFICIENT_BALANCE') {
             alert(data.message || 'Số dư không đủ! Vui lòng nạp thêm tiền để tạo video.');
