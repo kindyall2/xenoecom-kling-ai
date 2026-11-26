@@ -253,10 +253,20 @@ def update_video_failed(job_id):
 def get_user_videos(user_id, limit=20):
     if is_supabase_enabled():
         try:
-            q = f"user_videos?user_id=eq.{user_id}&order=id.desc&limit={limit}&select=job_id,prompt,video_url,cost,status,created_at"
+            q = f"user_videos?user_id=eq.{user_id}&order=id.desc&limit={limit}&select=job_id,prompt,video_url,cost,status,created_at,provider,external_id,used_key"
             rows = s_req(q)
             if rows is not None:
-                return [{"jobId": r["job_id"], "prompt": r["prompt"], "videoUrl": r["video_url"], "cost": r["cost"], "status": r["status"], "time": r["created_at"]} for r in rows]
+                return [{
+                    "jobId": r.get("job_id"),
+                    "prompt": r.get("prompt"),
+                    "videoUrl": r.get("video_url"),
+                    "cost": r.get("cost"),
+                    "status": r.get("status"),
+                    "time": r.get("created_at"),
+                    "provider": r.get("provider") or "kling",
+                    "externalId": r.get("external_id"),
+                    "usedKey": r.get("used_key"),
+                } for r in rows]
         except Exception as e:
             print("[DB] Supabase get_user_videos error:", e)
 
@@ -265,7 +275,137 @@ def get_user_videos(user_id, limit=20):
     c.execute("SELECT job_id, prompt, video_url, cost, status, created_at FROM user_videos WHERE user_id = ? ORDER BY id DESC LIMIT ?", (user_id, limit))
     rows = c.fetchall()
     conn.close()
-    return [{"jobId": r[0], "prompt": r[1], "videoUrl": r[2], "cost": r[3], "status": r[4], "time": r[5]} for r in rows]
+    return [{"jobId": r[0], "prompt": r[1], "videoUrl": r[2], "cost": r[3], "status": r[4], "time": r[5], "provider": "kling", "externalId": None, "usedKey": None} for r in rows]
+
+# 5b. Grok Video (CinAI Minimax 15s 1080p) & Kho API Key (15 credits/key -> dùng 1 lần tự bỏ)
+def mask_key(key):
+    key = (key or "").strip()
+    if len(key) <= 10:
+        return "*" * len(key)
+    return f"{key[:6]}...{key[-4:]}"
+
+def add_grok_video(user_id, call_id, prompt, cost, used_key):
+    if is_supabase_enabled():
+        try:
+            payload = {
+                "user_id": user_id,
+                "prompt": prompt,
+                "cost": cost,
+                "status": "processing",
+                "provider": "grok",
+                "external_id": str(call_id),
+                "used_key": used_key,
+            }
+            s_req("user_videos", method="POST", data=payload)
+            return True
+        except Exception as e:
+            print("[DB] Supabase add_grok_video error:", e)
+    return False
+
+def get_grok_video_by_call_id(call_id):
+    if is_supabase_enabled():
+        try:
+            import urllib.parse
+            q = f"user_videos?external_id=eq.{urllib.parse.quote(str(call_id))}&select=id,user_id,prompt,video_url,cost,status,used_key&limit=1"
+            rows = s_req(q)
+            return rows[0] if rows else None
+        except Exception as e:
+            print("[DB] Supabase get_grok_video_by_call_id error:", e)
+    return None
+
+def update_grok_video_url(call_id, video_url):
+    if is_supabase_enabled():
+        try:
+            import urllib.parse
+            s_req(f"user_videos?external_id=eq.{urllib.parse.quote(str(call_id))}", method="PATCH", data={"video_url": video_url, "status": "success"})
+            return True
+        except Exception as e:
+            print("[DB] Supabase update_grok_video_url error:", e)
+    return False
+
+def update_grok_video_failed(call_id):
+    if is_supabase_enabled():
+        try:
+            import urllib.parse
+            s_req(f"user_videos?external_id=eq.{urllib.parse.quote(str(call_id))}", method="PATCH", data={"status": "failed"})
+            return True
+        except Exception as e:
+            print("[DB] Supabase update_grok_video_failed error:", e)
+    return False
+
+def get_grok_keys_summary():
+    if is_supabase_enabled():
+        try:
+            rows = s_req("grok_api_keys?select=id,api_key,status,note,created_at&order=id.asc") or []
+            active_count = sum(1 for r in rows if r.get("status") == "active")
+            used_count = sum(1 for r in rows if r.get("status") != "active")
+            keys = [{
+                "id": r["id"],
+                "maskedKey": mask_key(r.get("api_key", "")),
+                "status": r.get("status", "active"),
+                "note": r.get("note", ""),
+                "created_at": r.get("created_at", ""),
+            } for r in rows]
+            return {"activeCount": active_count, "usedCount": used_count, "totalCount": len(rows), "keys": keys}
+        except Exception as e:
+            print("[DB] Supabase get_grok_keys_summary error:", e)
+    return {"activeCount": 0, "usedCount": 0, "totalCount": 0, "keys": []}
+
+def add_grok_keys(raw_keys):
+    added = 0
+    if is_supabase_enabled():
+        existing = s_req("grok_api_keys?select=api_key") or []
+        exist_set = set(r.get("api_key", "").strip() for r in existing)
+        to_insert = []
+        seen = set()
+        for k in raw_keys:
+            k = k.strip()
+            if len(k) < 8 or k in exist_set or k in seen:
+                continue
+            seen.add(k)
+            to_insert.append({"api_key": k, "status": "active", "note": "Sẵn sàng (15 credits)"})
+        if to_insert:
+            try:
+                s_req("grok_api_keys", method="POST", data=to_insert)
+                added = len(to_insert)
+            except Exception as e:
+                print("[DB] Supabase add_grok_keys error:", e)
+    return added
+
+def get_active_grok_keys():
+    if is_supabase_enabled():
+        try:
+            return s_req("grok_api_keys?status=eq.active&select=id,api_key&order=id.asc") or []
+        except Exception as e:
+            print("[DB] Supabase get_active_grok_keys error:", e)
+    return []
+
+def mark_grok_key_status(key_id, status, note=""):
+    if is_supabase_enabled():
+        try:
+            s_req(f"grok_api_keys?id=eq.{key_id}", method="PATCH", data={"status": status, "note": note})
+            return True
+        except Exception as e:
+            print("[DB] Supabase mark_grok_key_status error:", e)
+    return False
+
+def delete_grok_key(key_id):
+    if is_supabase_enabled():
+        try:
+            s_req(f"grok_api_keys?id=eq.{key_id}", method="DELETE")
+            return True
+        except Exception as e:
+            print("[DB] Supabase delete_grok_key error:", e)
+    return False
+
+def clear_used_grok_keys():
+    if is_supabase_enabled():
+        try:
+            s_req("grok_api_keys?status=neq.active", method="DELETE")
+            return True
+        except Exception as e:
+            print("[DB] Supabase clear_used_grok_keys error:", e)
+    return False
 
 # 6. Các hàm dành cho Admin
 def get_admin_stats():
