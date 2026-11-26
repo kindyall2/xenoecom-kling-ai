@@ -1059,11 +1059,38 @@
     }
 
     function removeImage(e) {
-      e.stopPropagation();
+      if (e) e.stopPropagation();
       uploadedImageKey = null;
       document.getElementById('fileInput').value = '';
       document.getElementById('uploadPlaceholder').classList.remove('hidden');
       document.getElementById('imagePreviewContainer').classList.add('hidden');
+    }
+
+    // Tự động xóa ảnh & prompt sau khi bấm Tạo Video thành công để khách dễ tạo video mới
+    function resetCreationInputs() {
+      const promptEl = document.getElementById('promptInput');
+      if (promptEl) promptEl.value = '';
+      if (currentMode === 'image') {
+        removeImage();
+        uploadedEndFrameKey = null;
+        const endInput = document.getElementById('endFileInput');
+        if (endInput) endInput.value = '';
+        const endStatus = document.getElementById('endFrameStatusText');
+        if (endStatus) endStatus.textContent = 'Thêm ảnh kết thúc (End frame)';
+      } else if (currentMode === 'grok') {
+        removeGrokImage();
+      } else if (currentMode === 'motion') {
+        motionCharKey = null;
+        motionVideoKey = null;
+        const mcIn = document.getElementById('motionCharInput');
+        const mvIn = document.getElementById('motionVideoInput');
+        const mcSt = document.getElementById('motionCharStatus');
+        const mvSt = document.getElementById('motionVideoStatus');
+        if (mcIn) mcIn.value = '';
+        if (mvIn) mvIn.value = '';
+        if (mcSt) mcSt.textContent = 'Chưa chọn ảnh';
+        if (mvSt) mvSt.textContent = 'Chưa chọn video (3s - 13s)';
+      }
     }
 
     async function handleEndFileSelect(e) {
@@ -1253,7 +1280,8 @@
             if (genBtn) genBtn.disabled = false;
             if (genBtnText) genBtnText.textContent = '➕ Tạo Thêm Video Khác Ngay';
             if (hintBox) hintBox.classList.remove('hidden');
-            openCreateMoreModal();
+            resetCreationInputs();
+          openCreateMoreModal();
           } else {
             if (data.error === 'INSUFFICIENT_BALANCE') {
               alert(data.message || 'Số dư không đủ! Lượt Grok Video 15s cần 750 đ.');
@@ -1322,6 +1350,7 @@
           if (genBtn) genBtn.disabled = false;
           if (genBtnText) genBtnText.textContent = '➕ Tạo Thêm Video Khác Ngay';
           if (hintBox) hintBox.classList.remove('hidden');
+          resetCreationInputs();
           openCreateMoreModal();
         } else {
           if (data.error === 'INSUFFICIENT_BALANCE') {
