@@ -915,7 +915,6 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
             content_type = self.headers.get("Content-Type", "")
             body = self.rfile.read(content_length)
             try:
-                import re
                 m = re.search(r"boundary=([^;\s]+)", content_type)
                 if not m:
                     raise ValueError("Missing multipart boundary")
