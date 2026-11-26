@@ -219,40 +219,6 @@
                 <p id="grokUploadStatusText" class="text-xs text-emerald-400 mt-1 font-medium">✓ Đã tải ảnh lên</p>
               </div>
             </div>
-
-            <div class="space-y-4 pt-1">
-              <div class="p-3 rounded-xl bg-gray-900/60 border border-gray-800">
-                <label class="block text-xs font-semibold text-purple-300 mb-2">1. Chọn Thời Lượng Grok Video (1080p)</label>
-                <div class="grid grid-cols-2 gap-3">
-                  <button type="button" onclick="setGrokDuration(10)" id="grokDur10" class="py-2.5 rounded-xl border border-gray-700 bg-gray-900 text-gray-400 text-xs font-semibold flex flex-col items-center justify-center hover:text-white transition">
-                    <span>⏱️ 10 Giây</span>
-                    <span class="text-[11px] text-amber-400 font-bold mt-0.5">500 đ</span>
-                  </button>
-                  <button type="button" onclick="setGrokDuration(15)" id="grokDur15" class="py-2.5 rounded-xl border border-purple-500 bg-purple-500/15 text-purple-300 text-xs font-semibold flex flex-col items-center justify-center transition">
-                    <span>⚡ 15 Giây</span>
-                    <span class="text-[11px] text-amber-400 font-bold mt-0.5">750 đ</span>
-                  </button>
-                </div>
-              </div>
-
-              <div class="p-3 rounded-xl bg-gray-900/60 border border-gray-800">
-                <label class="block text-xs font-semibold text-blue-300 mb-2">2. Chọn Tỉ Lệ Khung Hình</label>
-                <div class="grid grid-cols-3 gap-2.5">
-                  <button type="button" onclick="setGrokRatio('16:9')" id="grokRatio169" class="py-2 rounded-xl border border-gray-700 bg-gray-900 text-gray-400 text-xs font-semibold flex flex-col items-center justify-center hover:text-white transition">
-                    <span>16:9</span>
-                    <span class="text-[10px] text-gray-400">Ngang</span>
-                  </button>
-                  <button type="button" onclick="setGrokRatio('9:16')" id="grokRatio916" class="py-2 rounded-xl border border-blue-500 bg-blue-500/15 text-blue-300 text-xs font-semibold flex flex-col items-center justify-center transition">
-                    <span>9:16</span>
-                    <span class="text-[10px] text-gray-400">TikTok/Dọc</span>
-                  </button>
-                  <button type="button" onclick="setGrokRatio('1:1')" id="grokRatio11" class="py-2 rounded-xl border border-gray-700 bg-gray-900 text-gray-400 text-xs font-semibold flex flex-col items-center justify-center hover:text-white transition">
-                    <span>1:1</span>
-                    <span class="text-[10px] text-gray-400">Vuông</span>
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
 
           <!-- PROMPT -->
@@ -278,6 +244,41 @@
               <button type="button" onclick="applyPrompt('Cô gái phong cách anime đi dạo phố Tokyo dưới mưa ánh đèn neon phản chiếu tuyệt đẹp')" class="text-[11px] px-2 py-0.5 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition">
                 🌧️ Anime phố Tokyo
               </button>
+            </div>
+          </div>
+
+          <!-- CÀI ĐẶT GROK VIDEO (NẰM DƯỚI Ô NHẬP PROMPT) -->
+          <div id="grokSettingsSection" class="hidden space-y-4 pt-3 border-t border-gray-800">
+            <div class="p-3 rounded-xl bg-gray-900/60 border border-gray-800">
+              <label class="block text-xs font-semibold text-purple-300 mb-2">1. Chọn Thời Lượng Grok Video (1080p)</label>
+              <div class="grid grid-cols-2 gap-3">
+                <button type="button" onclick="setGrokDuration(10)" id="grokDur10" class="py-2.5 rounded-xl border border-gray-700 bg-gray-900 text-gray-400 text-xs font-semibold flex flex-col items-center justify-center hover:text-white transition">
+                  <span>⏱️ 10 Giây</span>
+                  <span class="text-[11px] text-amber-400 font-bold mt-0.5">500 đ</span>
+                </button>
+                <button type="button" onclick="setGrokDuration(15)" id="grokDur15" class="py-2.5 rounded-xl border border-purple-500 bg-purple-500/15 text-purple-300 text-xs font-semibold flex flex-col items-center justify-center transition">
+                  <span>⚡ 15 Giây</span>
+                  <span class="text-[11px] text-amber-400 font-bold mt-0.5">750 đ</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="p-3 rounded-xl bg-gray-900/60 border border-gray-800">
+              <label class="block text-xs font-semibold text-blue-300 mb-2">2. Chọn Tỉ Lệ Khung Hình</label>
+              <div class="grid grid-cols-3 gap-2.5">
+                <button type="button" onclick="setGrokRatio('16:9')" id="grokRatio169" class="py-2 rounded-xl border border-gray-700 bg-gray-900 text-gray-400 text-xs font-semibold flex flex-col items-center justify-center hover:text-white transition">
+                  <span>16:9</span>
+                  <span class="text-[10px] text-gray-400">Ngang</span>
+                </button>
+                <button type="button" onclick="setGrokRatio('9:16')" id="grokRatio916" class="py-2 rounded-xl border border-blue-500 bg-blue-500/15 text-blue-300 text-xs font-semibold flex flex-col items-center justify-center transition">
+                  <span>9:16</span>
+                  <span class="text-[10px] text-gray-400">TikTok/Dọc</span>
+                </button>
+                <button type="button" onclick="setGrokRatio('1:1')" id="grokRatio11" class="py-2 rounded-xl border border-gray-700 bg-gray-900 text-gray-400 text-xs font-semibold flex flex-col items-center justify-center hover:text-white transition">
+                  <span>1:1</span>
+                  <span class="text-[10px] text-gray-400">Vuông</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -795,6 +796,7 @@
       const imageArea = document.getElementById('imageUploadArea');
       const motionArea = document.getElementById('motionArea');
       const grokArea = document.getElementById('grokArea');
+      const grokSettings = document.getElementById('grokSettingsSection');
       const promptSec = document.getElementById('promptSection');
       const generalSettings = document.getElementById('generalSettingsSection');
 
@@ -807,6 +809,7 @@
         imageArea.classList.remove('hidden');
         motionArea.classList.add('hidden');
         if (grokArea) grokArea.classList.add('hidden');
+        if (grokSettings) grokSettings.classList.add('hidden');
         promptSec.classList.remove('hidden');
         generalSettings.classList.remove('hidden');
       } else if (mode === 'motion') {
@@ -814,6 +817,7 @@
         imageArea.classList.add('hidden');
         motionArea.classList.remove('hidden');
         if (grokArea) grokArea.classList.add('hidden');
+        if (grokSettings) grokSettings.classList.add('hidden');
         promptSec.classList.add('hidden');
         generalSettings.classList.add('hidden');
       } else if (mode === 'grok') {
@@ -821,6 +825,7 @@
         imageArea.classList.add('hidden');
         motionArea.classList.add('hidden');
         if (grokArea) grokArea.classList.remove('hidden');
+        if (grokSettings) grokSettings.classList.remove('hidden');
         promptSec.classList.remove('hidden');
         generalSettings.classList.add('hidden');
       }
