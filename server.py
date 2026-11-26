@@ -13,12 +13,142 @@ import uuid
 import os
 import hashlib
 import time
+import re
+import urllib.parse
+import mimetypes
 import db
 
 PORT = int(os.environ.get("PORT", 8080))
 API_BASE = "https://klinggiare.com"
 API_KEY = os.environ.get("KLING_API_KEY", "kling_sk_6bV7-Nvtk9GruKUDL-uMl0OfUXQEldZt_3lQF0MyLhE")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "xenoecom@admin2026")
+
+# Cấu hình Grok Video (CinAI Minimax H3-RH Enhanced 15s 1080p - 750đ / video - 15 credits/key dùng xong bỏ)
+CINAI_ORIGIN = "https://cinai.app"
+CINAI_API_BASE = f"{CINAI_ORIGIN}/api/v1"
+GROK_MODEL_SLUG = "minimax-h3-rh-enhanced"
+GROK_VIDEO_PRICE = 750
+GROK_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Xenoecom-Grok-Studio/1.0"
+
+def cinai_json_request(method, path, api_key, payload=None, timeout=45):
+    url = f"{CINAI_API_BASE}{path}"
+    headers = {"User-Agent": GROK_USER_AGENT, "Accept": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    body = None
+    if payload is not None:
+        headers["Content-Type"] = "application/json"
+        body = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=body, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+            try:
+                data = json.loads(raw)
+            except Exception:
+                data = {"raw": raw}
+            return resp.status, data
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode("utf-8", errors="replace")
+        try:
+            data = json.loads(raw)
+        except Exception:
+            data = {"error": raw or str(e)}
+        return e.code, data
+    except Exception as e:
+        return 502, {"error": f"Không kết nối được tới máy chủ Grok AI: {e}"}
+
+def extract_cinai_video_urls(obj):
+    urls = []
+    def walk(node):
+        if isinstance(node, str):
+            s = node.strip()
+            if s.startswith(("/api/", "/media/", "/uploads/")):
+                s = f"{CINAI_ORIGIN}{s}"
+            if s.startswith(("http://", "https://")) and s not in urls:
+                urls.append(s)
+        elif isinstance(node, dict):
+            priority = ("resultUrls", "result_urls", "video_url", "video", "videos", "output", "outputs", "urls", "url", "files", "media", "result")
+            for k in priority:
+                if k in node:
+                    walk(node[k])
+            for k, v in node.items():
+                if k not in priority:
+                    walk(v)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+    walk(obj)
+    return urls
+
+def upload_image_to_public_host(filename, content_type, file_bytes):
+    safe_name = re.sub(r'["\r\n]', "_", filename or "image.jpg")
+    ct = content_type or mimetypes.guess_type(safe_name)[0] or "image/jpeg"
+    # 1. Litterbox (72h direct URL)
+    try:
+        boundary = f"----XenoGrokBoundary{uuid.uuid4().hex}"
+        body = b"".join([
+            f'--{boundary}\r\nContent-Disposition: form-data; name="reqtype"\r\n\r\nfileupload\r\n'.encode("utf-8"),
+            f'--{boundary}\r\nContent-Disposition: form-data; name="time"\r\n\r\n72h\r\n'.encode("utf-8"),
+            f'--{boundary}\r\nContent-Disposition: form-data; name="fileToUpload"; filename="{safe_name}"\r\nContent-Type: {ct}\r\n\r\n'.encode("utf-8"),
+            file_bytes,
+            f"\r\n--{boundary}--\r\n".encode("utf-8"),
+        ])
+        req = urllib.request.Request(
+            "https://litterbox.catbox.moe/resources/internals/api.php",
+            data=body,
+            headers={"User-Agent": GROK_USER_AGENT, "Content-Type": f"multipart/form-data; boundary={boundary}", "Content-Length": str(len(body))},
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=45) as resp:
+            url = resp.read().decode("utf-8", errors="replace").strip()
+            if resp.status == 200 and url.startswith(("http://", "https://")):
+                return True, url
+    except Exception:
+        pass
+    # 2. Uguu.se fallback
+    try:
+        boundary = f"----XenoGrokBoundary{uuid.uuid4().hex}"
+        body = b"".join([
+            f'--{boundary}\r\nContent-Disposition: form-data; name="files[]"; filename="{safe_name}"\r\nContent-Type: {ct}\r\n\r\n'.encode("utf-8"),
+            file_bytes,
+            f"\r\n--{boundary}--\r\n".encode("utf-8"),
+        ])
+        req = urllib.request.Request(
+            "https://uguu.se/upload",
+            data=body,
+            headers={"User-Agent": GROK_USER_AGENT, "Content-Type": f"multipart/form-data; boundary={boundary}", "Content-Length": str(len(body))},
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=45) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="replace"))
+            files = data.get("files") or []
+            if files and files[0].get("url"):
+                return True, files[0]["url"]
+    except Exception:
+        pass
+    # 3. Tmpfiles fallback
+    try:
+        boundary = f"----XenoGrokBoundary{uuid.uuid4().hex}"
+        body = b"".join([
+            f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="{safe_name}"\r\nContent-Type: {ct}\r\n\r\n'.encode("utf-8"),
+            file_bytes,
+            f"\r\n--{boundary}--\r\n".encode("utf-8"),
+        ])
+        req = urllib.request.Request(
+            "https://tmpfiles.org/api/v1/upload",
+            data=body,
+            headers={"User-Agent": GROK_USER_AGENT, "Content-Type": f"multipart/form-data; boundary={boundary}", "Content-Length": str(len(body))},
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=45) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="replace"))
+            raw_url = (data.get("data") or {}).get("url") or ""
+            if raw_url:
+                return True, raw_url.replace("http://", "https://").replace("tmpfiles.org/", "tmpfiles.org/dl/", 1)
+    except Exception as e:
+        return False, str(e)
+    return False, "Không thể tải ảnh lên máy chủ trung gian"
 
 # Token tĩnh cho Admin - đảm bảo không bị logout khi khởi động lại server
 ADMIN_STATIC_TOKEN = "xenoecom_adm_" + hashlib.sha256(("xenoecom_admin_salt_" + ADMIN_PASSWORD).encode("utf-8")).hexdigest()[:24]
@@ -152,7 +282,56 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_json(200, {"success": True, "user": user})
             return
 
-        # API: Lấy lịch sử video của khách (Tự động đồng bộ trạng thái các video đang render từ Klinggiare)
+        # API ADMIN: Lấy danh sách & thống kê Kho Key Grok (/api/admin/grok-keys)
+        if path == "/api/admin/grok-keys":
+            if not self.is_admin_authenticated():
+                self.send_json(401, {"success": False, "error": "Yêu cầu quyền Quản trị viên!"})
+                return
+            summary = db.get_grok_keys_summary()
+            self.send_json(200, {"success": True, **summary})
+            return
+
+        # API GROK: Kiểm tra trạng thái job Grok Video (/api/grok/job/<call_id>)
+        if path.startswith("/api/grok/job/"):
+            call_id = path.replace("/api/grok/job/", "").strip()
+            rec = db.get_grok_video_by_call_id(call_id)
+            if not rec:
+                self.send_json(404, {"success": False, "error": "Không tìm thấy lệnh Grok Video"})
+                return
+            if rec.get("status") == "success" and rec.get("video_url"):
+                self.send_json(200, {"success": True, "status": "success", "videoUrl": rec["video_url"]})
+                return
+            if rec.get("status") == "failed":
+                self.send_json(200, {"success": True, "status": "failed", "error": "Tạo video thất bại (Đã hoàn tiền)"})
+                return
+
+            used_key = rec.get("used_key") or ""
+            st_code, cdata = cinai_json_request("GET", f"/calls/{urllib.parse.quote(call_id)}", used_key, timeout=15)
+            call_obj = None
+            if isinstance(cdata, dict):
+                call_obj = (cdata.get("data") or {}).get("call") if isinstance(cdata.get("data"), dict) else cdata.get("call")
+            if isinstance(call_obj, dict):
+                cst = (call_obj.get("status") or "processing").lower()
+                if cst == "succeeded":
+                    urls = extract_cinai_video_urls(call_obj.get("output"))
+                    vurl = urls[0] if urls else None
+                    if vurl:
+                        db.update_grok_video_url(call_id, vurl)
+                        self.send_json(200, {"success": True, "status": "success", "videoUrl": vurl})
+                        return
+                elif cst in ("failed", "canceled", "cancelled", "error"):
+                    if rec.get("status") == "processing":
+                        db.update_grok_video_failed(call_id)
+                        if rec.get("user_id") and rec.get("cost"):
+                            db.adjust_user_balance(rec["user_id"], int(rec["cost"]))
+                    self.send_json(200, {"success": True, "status": "failed", "error": str(call_obj.get("error") or "Lỗi xử lý")})
+                    return
+                self.send_json(200, {"success": True, "status": cst})
+                return
+            self.send_json(200, {"success": True, "status": "processing"})
+            return
+
+        # API: Lấy lịch sử video của khách (Tự động đồng bộ trạng thái các video đang render từ Klinggiare & Grok)
         if path == "/api/user/videos":
             user = self.get_authenticated_user()
             if not user:
@@ -162,39 +341,64 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
             # Kiểm tra và cập nhật tối đa 5 video đang ở trạng thái processing gần nhất
             checked = 0
             for v in videos:
-                if v.get("status") == "processing" and v.get("jobId") and checked < 5:
-                    checked += 1
-                    jid = v["jobId"]
-                    try:
-                        jreq = urllib.request.Request(
-                            f"{API_BASE}/api/v1/ext/jobs/{jid}",
-                            headers={"Authorization": f"Bearer {API_KEY}", "User-Agent": "Mozilla/5.0"}
-                        )
-                        with urllib.request.urlopen(jreq, timeout=6) as jres:
-                            jdata = json.loads(jres.read().decode("utf-8"))
-                        jst = jdata.get("status")
-                        if jst == "success":
-                            vurl = None
-                            try:
-                                vreq = urllib.request.Request(
-                                    f"{API_BASE}/api/v1/ext/jobs/{jid}/video-url",
-                                    headers={"Authorization": f"Bearer {API_KEY}", "User-Agent": "Mozilla/5.0"}
-                                )
-                                with urllib.request.urlopen(vreq, timeout=6) as vres:
-                                    vurl = json.loads(vres.read().decode("utf-8")).get("url")
-                            except Exception:
-                                vurl = jdata.get("providerVideoUrl") or jdata.get("providerCdnUrl")
-                            if vurl:
-                                db.update_video_url(jid, vurl)
-                                v["videoUrl"] = vurl
-                                v["status"] = "success"
-                        elif jst in ("failed", "canceled"):
-                            db.update_video_failed(jid)
-                            v["status"] = "failed"
-                            if v.get("cost"):
-                                db.adjust_user_balance(user["id"], int(v["cost"]))
-                    except Exception:
-                        pass
+                if v.get("status") == "processing" and checked < 5:
+                    if v.get("provider") == "grok" and v.get("externalId"):
+                        checked += 1
+                        cid = v["externalId"]
+                        ukey = v.get("usedKey") or ""
+                        try:
+                            _, cdata = cinai_json_request("GET", f"/calls/{urllib.parse.quote(cid)}", ukey, timeout=8)
+                            call_obj = (cdata.get("data") or {}).get("call") if isinstance(cdata, dict) and isinstance(cdata.get("data"), dict) else (cdata.get("call") if isinstance(cdata, dict) else None)
+                            if isinstance(call_obj, dict):
+                                cst = (call_obj.get("status") or "").lower()
+                                if cst == "succeeded":
+                                    urls = extract_cinai_video_urls(call_obj.get("output"))
+                                    if urls:
+                                        db.update_grok_video_url(cid, urls[0])
+                                        v["videoUrl"] = urls[0]
+                                        v["status"] = "success"
+                                elif cst in ("failed", "canceled", "cancelled", "error"):
+                                    db.update_grok_video_failed(cid)
+                                    v["status"] = "failed"
+                                    if v.get("cost"):
+                                        db.adjust_user_balance(user["id"], int(v["cost"]))
+                        except Exception:
+                            pass
+                    elif v.get("jobId"):
+                        checked += 1
+                        jid = v["jobId"]
+                        try:
+                            jreq = urllib.request.Request(
+                                f"{API_BASE}/api/v1/ext/jobs/{jid}",
+                                headers={"Authorization": f"Bearer {API_KEY}", "User-Agent": "Mozilla/5.0"}
+                            )
+                            with urllib.request.urlopen(jreq, timeout=6) as jres:
+                                jdata = json.loads(jres.read().decode("utf-8"))
+                            jst = jdata.get("status")
+                            if jst == "success":
+                                vurl = None
+                                try:
+                                    vreq = urllib.request.Request(
+                                        f"{API_BASE}/api/v1/ext/jobs/{jid}/video-url",
+                                        headers={"Authorization": f"Bearer {API_KEY}", "User-Agent": "Mozilla/5.0"}
+                                    )
+                                    with urllib.request.urlopen(vreq, timeout=6) as vres:
+                                        vurl = json.loads(vres.read().decode("utf-8")).get("url")
+                                except Exception:
+                                    vurl = jdata.get("providerVideoUrl") or jdata.get("providerCdnUrl")
+                                if vurl:
+                                    db.update_video_url(jid, vurl)
+                                    v["videoUrl"] = vurl
+                                    v["status"] = "success"
+                            elif jst in ("failed", "canceled"):
+                                db.update_video_failed(jid)
+                                v["status"] = "failed"
+                                if v.get("cost"):
+                                    db.adjust_user_balance(user["id"], int(v["cost"]))
+                        except Exception:
+                            pass
+                # Ẩn API key nội bộ trước khi trả về trình duyệt khách hàng
+                v.pop("usedKey", None)
             self.send_json(200, {"success": True, "videos": videos})
             return
 
@@ -319,6 +523,168 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_json(200, {"success": True, "adminToken": token})
                 else:
                     self.send_json(400, {"success": False, "error": "Mật khẩu Quản trị Admin không chính xác!"})
+            except Exception as e:
+                self.send_json(500, {"success": False, "error": str(e)})
+            return
+
+        # API ADMIN: Thêm hàng loạt API Key Grok vào kho (/api/admin/grok-keys/add)
+        if path == "/api/admin/grok-keys/add":
+            if not self.is_admin_authenticated():
+                self.send_json(401, {"success": False, "error": "Yêu cầu quyền Quản trị viên!"})
+                return
+            body = self.rfile.read(content_length)
+            try:
+                data = json.loads(body.decode("utf-8"))
+                keys_text = data.get("keysText", "") or ""
+                raw_keys = [x.strip() for x in re.split(r"[\r\n,;\s]+", keys_text) if x.strip()]
+                added = db.add_grok_keys(raw_keys)
+                summary = db.get_grok_keys_summary()
+                self.send_json(200, {"success": True, "added": added, **summary})
+            except Exception as e:
+                self.send_json(500, {"success": False, "error": str(e)})
+            return
+
+        # API ADMIN: Xóa API Key Grok hoặc dọn các key đã dùng (/api/admin/grok-keys/delete)
+        if path == "/api/admin/grok-keys/delete":
+            if not self.is_admin_authenticated():
+                self.send_json(401, {"success": False, "error": "Yêu cầu quyền Quản trị viên!"})
+                return
+            body = self.rfile.read(content_length)
+            try:
+                data = json.loads(body.decode("utf-8"))
+                if data.get("action") == "clear_used":
+                    db.clear_used_grok_keys()
+                elif data.get("id"):
+                    db.delete_grok_key(int(data["id"]))
+                summary = db.get_grok_keys_summary()
+                self.send_json(200, {"success": True, **summary})
+            except Exception as e:
+                self.send_json(500, {"success": False, "error": str(e)})
+            return
+
+        # API GROK: Tải ảnh lên host trung gian cho Grok Video (/api/grok/upload-image)
+        if path == "/api/grok/upload-image":
+            content_type = self.headers.get("Content-Type", "")
+            body = self.rfile.read(content_length)
+            try:
+                m = re.search(r"boundary=([^;\s]+)", content_type)
+                if not m:
+                    raise ValueError("Missing multipart boundary")
+                boundary = m.group(1).strip('"').encode("utf-8")
+                parts = body.split(b"--" + boundary)
+                uploaded_url = None
+                for part in parts:
+                    if b"Content-Disposition" not in part:
+                        continue
+                    part = part.lstrip(b"\r\n")
+                    if b"\r\n\r\n" not in part:
+                        continue
+                    header_bytes, file_bytes = part.split(b"\r\n\r\n", 1)
+                    if file_bytes.endswith(b"\r\n"):
+                        file_bytes = file_bytes[:-2]
+                    header_str = header_bytes.decode("utf-8", errors="ignore")
+                    fn_match = re.search(r'filename="([^"]+)"', header_str)
+                    filename = fn_match.group(1) if fn_match else "image.jpg"
+                    ct_match = re.search(r"Content-Type:\s*([^\r\n]+)", header_str, re.IGNORECASE)
+                    part_ct = ct_match.group(1).strip() if ct_match else "image/jpeg"
+                    ok, res_url = upload_image_to_public_host(filename, part_ct, file_bytes)
+                    if ok:
+                        uploaded_url = res_url
+                        break
+                    else:
+                        raise ValueError(res_url)
+                if not uploaded_url:
+                    raise ValueError("Không nhận được dữ liệu ảnh")
+                self.send_json(200, {"success": True, "url": uploaded_url})
+            except Exception as e:
+                self.send_json(500, {"success": False, "error": str(e)})
+            return
+
+        # API GROK: Tạo video Grok 15s · 1080p · 750đ (Dùng 1 key 15 credits rồi bỏ luôn key đó)
+        if path == "/api/grok/create-video":
+            user = self.get_authenticated_user()
+            if not user:
+                self.send_json(401, {"success": False, "error": "AUTH_REQUIRED", "message": "Vui lòng đăng nhập hoặc tạo tài khoản trước khi tạo video!"})
+                return
+            body = self.rfile.read(content_length)
+            try:
+                req_data = json.loads(body.decode("utf-8"))
+                prompt = (req_data.get("prompt") or "").strip()
+                image_url = (req_data.get("imageUrl") or "").strip()
+                aspect_ratio = req_data.get("aspectRatio") or "9:16"
+                if aspect_ratio not in ("16:9", "9:16", "1:1"):
+                    aspect_ratio = "9:16"
+
+                if not image_url:
+                    self.send_json(400, {"success": False, "error": "Vui lòng tải lên 1 ảnh đầu vào cho Grok Video!"})
+                    return
+                if not prompt:
+                    prompt = "Chuyển động tự nhiên, mượt mà, chất lượng điện ảnh 1080p sắc nét"
+
+                cost = GROK_VIDEO_PRICE
+                if user["balance"] < cost:
+                    self.send_json(402, {
+                        "success": False,
+                        "error": "INSUFFICIENT_BALANCE",
+                        "message": f"Số dư của bạn không đủ ({user['balance']} đ). Lượt Grok Video 15s 1080p cần {cost} đ. Vui lòng nạp thêm tiền!"
+                    })
+                    return
+
+                candidates = db.get_active_grok_keys()
+                if not candidates:
+                    self.send_json(503, {
+                        "success": False,
+                        "error": "Kho máy chủ Grok Video tạm thời hết lượt khả dụng. Vui lòng liên hệ Admin nạp thêm hoặc thử lại sau ít phút!"
+                    })
+                    return
+
+                # Trừ tiền khách trước
+                new_balance = db.adjust_user_balance(user["id"], -cost)
+
+                req_payload = {
+                    "model": GROK_MODEL_SLUG,
+                    "input": {
+                        "prompt": prompt,
+                        "mode": "image",
+                        "image_urls": [image_url],
+                        "aspect_ratio": aspect_ratio,
+                        "resolution": "1080p",
+                        "duration": 15,
+                        "n": "1",
+                    }
+                }
+
+                last_err = "Không thể tạo Grok Video lúc này"
+                for k in candidates:
+                    st_code, cdata = cinai_json_request("POST", "/calls", k["api_key"], req_payload, timeout=60)
+                    call_obj = None
+                    if isinstance(cdata, dict):
+                        call_obj = (cdata.get("data") or {}).get("call") if isinstance(cdata.get("data"), dict) else cdata.get("call")
+                    if st_code in (200, 201, 202) and isinstance(call_obj, dict) and call_obj.get("id"):
+                        call_id = str(call_obj["id"])
+                        # Đánh dấu bỏ luôn key này sau khi đã dùng 15 credits cho 1 video
+                        db.mark_grok_key_status(k["id"], "used", "Đã dùng hết 15 credits - Tự động bỏ")
+                        db.add_grok_video(user["id"], call_id, f"[Grok 15s] {prompt}", cost, k["api_key"])
+                        self.send_json(200, {
+                            "success": True,
+                            "callId": call_id,
+                            "remainingBalance": new_balance,
+                        })
+                        return
+
+                    # Nếu key lỗi hoặc không đủ credit -> đánh dấu loại bỏ key đó và thử key kế tiếp
+                    err_txt = str(cdata).lower()
+                    if st_code in (401, 402, 403) or "credit" in err_txt or "insufficient" in err_txt or "unauthorized" in err_txt or "invalid" in err_txt:
+                        db.mark_grok_key_status(k["id"], "invalid", f"Lỗi key (HTTP {st_code})")
+                        last_err = f"Key hết hạn hoặc không đủ 15 credits (HTTP {st_code})"
+                        continue
+                    else:
+                        last_err = (cdata.get("error") if isinstance(cdata, dict) else None) or f"Lỗi máy chủ Grok (HTTP {st_code})"
+                        break
+
+                # Hoàn tiền ngay nếu không tạo được video
+                db.adjust_user_balance(user["id"], cost)
+                self.send_json(500, {"success": False, "error": str(last_err)})
             except Exception as e:
                 self.send_json(500, {"success": False, "error": str(e)})
             return
