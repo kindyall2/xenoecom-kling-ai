@@ -614,6 +614,7 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                 aspect_ratio = req_data.get("aspectRatio") or "9:16"
                 if aspect_ratio not in ("16:9", "9:16", "1:1"):
                     aspect_ratio = "9:16"
+                grok_duration = 10 if int(req_data.get("duration", 15)) == 10 else 15
 
                 if not image_url:
                     self.send_json(400, {"success": False, "error": "Vui lòng tải lên 1 ảnh đầu vào cho Grok Video!"})
@@ -621,12 +622,12 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                 if not prompt:
                     prompt = "Chuyển động tự nhiên, mượt mà, chất lượng điện ảnh 1080p sắc nét"
 
-                cost = GROK_VIDEO_PRICE
+                cost = 500 if grok_duration == 10 else GROK_VIDEO_PRICE
                 if user["balance"] < cost:
                     self.send_json(402, {
                         "success": False,
                         "error": "INSUFFICIENT_BALANCE",
-                        "message": f"Số dư của bạn không đủ ({user['balance']} đ). Lượt Grok Video 15s 1080p cần {cost} đ. Vui lòng nạp thêm tiền!"
+                        "message": f"Số dư của bạn không đủ ({user['balance']} đ). Lượt Grok Video {grok_duration}s 1080p cần {cost} đ. Vui lòng nạp thêm tiền!"
                     })
                     return
 
@@ -649,7 +650,7 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                         "image_urls": [image_url],
                         "aspect_ratio": aspect_ratio,
                         "resolution": "1080p",
-                        "duration": 15,
+                        "duration": grok_duration,
                         "n": "1",
                     }
                 }
@@ -663,8 +664,8 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                     if st_code in (200, 201, 202) and isinstance(call_obj, dict) and call_obj.get("id"):
                         call_id = str(call_obj["id"])
                         # Đánh dấu bỏ luôn key này sau khi đã dùng 15 credits cho 1 video
-                        db.mark_grok_key_status(k["id"], "used", "Đã dùng hết 15 credits - Tự động bỏ")
-                        db.add_grok_video(user["id"], call_id, f"[Grok 15s] {prompt}", cost, k["api_key"])
+                        db.mark_grok_key_status(k["id"], "used", f"Đã dùng ({grok_duration}s) - Tự động bỏ")
+                        db.add_grok_video(user["id"], call_id, f"[Grok {grok_duration}s] {prompt}", cost, k["api_key"])
                         self.send_json(200, {
                             "success": True,
                             "callId": call_id,
