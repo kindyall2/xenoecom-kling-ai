@@ -23,11 +23,13 @@ API_BASE = "https://klinggiare.com"
 API_KEY = os.environ.get("KLING_API_KEY", "kling_sk_6bV7-Nvtk9GruKUDL-uMl0OfUXQEldZt_3lQF0MyLhE")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Theanh2025@")
 
-# Cấu hình Grok Video (CinAI Minimax H3-RH Enhanced 15s 1080p - 750đ / video - 15 credits/key dùng xong bỏ)
+# Cấu hình Grok Video & Veo 3 (CinAI API - 15 credits/key dùng xong bỏ)
 CINAI_ORIGIN = "https://cinai.app"
 CINAI_API_BASE = f"{CINAI_ORIGIN}/api/v1"
 GROK_MODEL_SLUG = "minimax-h3-rh-enhanced"
 GROK_VIDEO_PRICE = 750
+VEO_MODEL_SLUG = "gemini-omni-1-2"
+VEO_VIDEO_PRICE = 500
 GROK_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Xenoecom-Grok-Studio/1.0"
 
 def cinai_json_request(method, path, api_key, payload=None, timeout=45):
@@ -681,6 +683,98 @@ class KlingHandler(http.server.SimpleHTTPRequestHandler):
                         continue
                     else:
                         last_err = (cdata.get("error") if isinstance(cdata, dict) else None) or f"Lỗi máy chủ Grok (HTTP {st_code})"
+                        break
+
+                # Hoàn tiền ngay nếu không tạo được video
+                db.adjust_user_balance(user["id"], cost)
+                self.send_json(500, {"success": False, "error": str(last_err)})
+            except Exception as e:
+                self.send_json(500, {"success": False, "error": str(e)})
+            return
+
+        # API VEO 3: Tạo video Veo 3 (Gemini Omni 1.2 · 10s có tiếng · 500đ · dùng chung kho Key CinAI)
+        if path == "/api/veo/create-video":
+            user = self.get_authenticated_user()
+            if not user:
+                self.send_json(401, {"success": False, "error": "AUTH_REQUIRED", "message": "Vui lòng đăng nhập hoặc tạo tài khoản trước khi tạo video!"})
+                return
+            body = self.rfile.read(content_length)
+            try:
+                req_data = json.loads(body.decode("utf-8"))
+                prompt = (req_data.get("prompt") or "").strip()
+                image_urls = [u.strip() for u in (req_data.get("imageUrls") or []) if isinstance(u, str) and u.strip()][:2]
+                aspect_ratio = req_data.get("aspectRatio") or "9:16"
+                if aspect_ratio not in ("16:9", "9:16"):
+                    aspect_ratio = "9:16"
+
+                if not prompt:
+                    if image_urls:
+                        prompt = "Chuyển động tự nhiên, sống động, có âm thanh chân thực"
+                    else:
+                        self.send_json(400, {"success": False, "error": "Vui lòng nhập mô tả video (Prompt) hoặc tải lên ảnh đầu vào cho Veo 3!"})
+                        return
+
+                cost = VEO_VIDEO_PRICE
+                if user["balance"] < cost:
+                    self.send_json(402, {
+                        "success": False,
+                        "error": "INSUFFICIENT_BALANCE",
+                        "message": f"Số dư của bạn không đủ ({user['balance']} đ). Lượt Veo 3 (10s có tiếng) cần {cost} đ. Vui lòng nạp thêm tiền!"
+                    })
+                    return
+
+                candidates = db.get_active_grok_keys()
+                if not candidates:
+                    self.send_json(503, {
+                        "success": False,
+                        "error": "Kho máy chủ Veo 3 / Grok tạm thời hết lượt khả dụng. Vui lòng liên hệ Admin nạp thêm hoặc thử lại sau ít phút!"
+                    })
+                    return
+
+                # Trừ tiền khách trước
+                new_balance = db.adjust_user_balance(user["id"], -cost)
+
+                veo_input = {
+                    "prompt": prompt,
+                    "aspect_ratio": aspect_ratio,
+                }
+                if image_urls:
+                    veo_input["mode"] = "image"
+                    veo_input["image_urls"] = image_urls
+                else:
+                    veo_input["mode"] = "text"
+                    veo_input["duration"] = "10"
+
+                req_payload = {
+                    "model": VEO_MODEL_SLUG,
+                    "input": veo_input,
+                }
+
+                last_err = "Không thể tạo video Veo 3 lúc này"
+                for k in candidates:
+                    st_code, cdata = cinai_json_request("POST", "/calls", k["api_key"], req_payload, timeout=60)
+                    call_obj = None
+                    if isinstance(cdata, dict):
+                        call_obj = (cdata.get("data") or {}).get("call") if isinstance(cdata.get("data"), dict) else cdata.get("call")
+                    if st_code in (200, 201, 202) and isinstance(call_obj, dict) and call_obj.get("id"):
+                        call_id = str(call_obj["id"])
+                        # Đánh dấu bỏ luôn key này sau khi đã dùng 15 credits cho 1 video
+                        db.mark_grok_key_status(k["id"], "used", "Đã dùng (Veo 3 10s) - Tự động bỏ")
+                        db.add_grok_video(user["id"], call_id, f"[Veo 3 10s] {prompt}", cost, k["api_key"])
+                        self.send_json(200, {
+                            "success": True,
+                            "callId": call_id,
+                            "remainingBalance": new_balance,
+                        })
+                        return
+
+                    err_txt = str(cdata).lower()
+                    if st_code in (401, 402, 403) or "credit" in err_txt or "insufficient" in err_txt or "unauthorized" in err_txt or "invalid" in err_txt:
+                        db.mark_grok_key_status(k["id"], "invalid", f"Lỗi key (HTTP {st_code})")
+                        last_err = f"Key hết hạn hoặc không đủ 15 credits (HTTP {st_code})"
+                        continue
+                    else:
+                        last_err = (cdata.get("error") if isinstance(cdata, dict) else None) or f"Lỗi máy chủ Veo 3 (HTTP {st_code})"
                         break
 
                 # Hoàn tiền ngay nếu không tạo được video
