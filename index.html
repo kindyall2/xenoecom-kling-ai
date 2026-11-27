@@ -1604,6 +1604,10 @@
 
     function pollGrokJobStatus(callId, promptText) {
       if (activePollingInterval) clearInterval(activePollingInterval);
+      const isVeo = (promptText || '').startsWith('[Veo 3');
+      const durMatch = (promptText || '').match(/(\d+s)/);
+      const durLabel = durMatch ? durMatch[1] : (isVeo ? '10s' : '15s');
+      const engineName = isVeo ? 'Veo 3' : 'Grok AI';
       let stepPercent = 25;
       activePollingInterval = setInterval(async () => {
         try {
@@ -1615,22 +1619,26 @@
             const stepTitle = document.getElementById('loadingStepTitle');
             const stepDesc = document.getElementById('loadingStepDesc');
             const progressBar = document.getElementById('progressBar');
-            statusBadge.textContent = 'Grok 15s: ' + st;
+            statusBadge.textContent = engineName + ' (' + durLabel + '): ' + st;
             if (st === 'success' && data.videoUrl) {
               clearInterval(activePollingInterval);
               progressBar.style.width = '100%';
-              stepTitle.textContent = 'Hoàn tất Grok Video 15s (1080p)!';
+              stepTitle.textContent = 'Hoàn tất ' + engineName + ' (' + durLabel + ')!';
               showVideoResult(data.videoUrl, promptText);
               setUIGenerating(false);
               checkAuth();
             } else if (st === 'failed') {
               clearInterval(activePollingInterval);
-              alert('Grok Video không thành công (' + (data.error || 'Lỗi xử lý') + '). Số dư 750 đ đã được tự động hoàn lại vào ví của bạn.');
+              alert(engineName + ' không thành công (' + (data.error || 'Lỗi xử lý') + '). Số dư đã được tự động hoàn lại vào ví của bạn.');
               setUIGenerating(false);
               checkAuth();
             } else {
-              stepTitle.textContent = 'Grok AI đang render video 15s (1080p)...';
-              stepDesc.textContent = 'Đang xử lý khung hình siêu nét Full HD';
+              stepTitle.textContent = isVeo
+                ? 'Veo 3 đang render video 10s có tiếng...'
+                : ('Grok AI đang render video ' + durLabel + ' (1080p)...');
+              stepDesc.textContent = isVeo
+                ? 'Đang xử lý khung hình & âm thanh Google AI'
+                : 'Đang xử lý khung hình siêu nét Full HD';
               stepPercent = Math.min(stepPercent + 3, 88);
               progressBar.style.width = stepPercent + '%';
             }
