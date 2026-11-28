@@ -32,6 +32,35 @@ def s_req(path, method="GET", data=None, extra_headers=None):
         content = res.read().decode("utf-8")
         return json.loads(content) if content else None
 
+def s_count(path):
+    """Đếm chính xác tổng số dòng trên Supabase (không bị giới hạn 1000 dòng mặc định)."""
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Prefer": "count=exact",
+        "Range": "0-0"
+    }
+    req = urllib.request.Request(f"{SUPABASE_URL}/rest/v1/{path}", headers=headers, method="HEAD")
+    with urllib.request.urlopen(req, timeout=10) as res:
+        cr = res.headers.get("Content-Range", "")
+        if "/" in cr:
+            total = cr.split("/")[-1]
+            if total.isdigit():
+                return int(total)
+    return 0
+
+def s_req_all(path, page_size=1000):
+    """Lấy toàn bộ dòng từ Supabase bằng phân trang (vượt giới hạn 1000 dòng/lần)."""
+    all_rows = []
+    offset = 0
+    while True:
+        rows = s_req(path, extra_headers={"Range": f"{offset}-{offset + page_size - 1}"}) or []
+        all_rows.extend(rows)
+        if len(rows) < page_size:
+            break
+        offset += page_size
+    return all_rows
+
 def get_sqlite():
     conn = sqlite3.connect(DB_PATH)
     return conn
@@ -411,11 +440,10 @@ def clear_used_grok_keys():
 def get_admin_stats():
     if is_supabase_enabled():
         try:
-            users = s_req("users?select=id,balance") or []
+            users = s_req_all("users?select=id,balance")
             total_users = len(users)
             total_user_balance = sum(int(u.get("balance") or 0) for u in users)
-            vids = s_req("user_videos?status=eq.success&select=id") or []
-            total_videos = len(vids)
+            total_videos = s_count("user_videos?status=eq.success&select=id")
             return total_users, total_user_balance, total_videos
         except Exception as e:
             print("[DB] Supabase get_admin_stats error:", e)
@@ -432,8 +460,8 @@ def get_admin_stats():
 def get_admin_users():
     if is_supabase_enabled():
         try:
-            users = s_req("users?select=id,username,email,balance,created_at&order=id.desc") or []
-            vids = s_req("user_videos?status=eq.success&select=user_id") or []
+            users = s_req_all("users?select=id,username,email,balance,created_at&order=id.desc")
+            vids = s_req_all("user_videos?status=eq.success&select=user_id")
             counts = {}
             for v in vids:
                 uid = v.get("user_id")
