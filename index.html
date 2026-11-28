@@ -1737,10 +1737,9 @@
       }
 
       try {
-        // Tải qua proxy backend để đảm bảo nhận đúng định dạng file video MP4 trên điện thoại
-        const proxyUrl = '/api/download-video?url=' + encodeURIComponent(url);
-        const res = await fetch(proxyUrl);
-        if (!res.ok) throw new Error('Download failed');
+        // Tải trực tiếp từ CDN gốc của video (không qua server Render để tiết kiệm 100% băng thông)
+        const res = await fetch(url, { mode: 'cors' });
+        if (!res.ok) throw new Error('Direct CORS fetch failed');
         const blob = await res.blob();
         const blobUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -1754,8 +1753,15 @@
           window.URL.revokeObjectURL(blobUrl);
         }, 3000);
       } catch (err) {
-        // Fallback mở trực tiếp link proxy tải xuống
-        window.location.href = '/api/download-video?url=' + encodeURIComponent(url);
+        // Fallback mở trực tiếp link video gốc (không đi qua Render proxy)
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'kling_video_' + Date.now() + '.mp4';
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => document.body.removeChild(a), 1000);
       } finally {
         if (btn) {
           setTimeout(() => {
